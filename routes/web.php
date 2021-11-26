@@ -23,8 +23,11 @@ Route::get('/dashboard', function () {
 })->middleware(['auth'])->name('dashboard');
 
 Route::get('/create',[\App\Http\Controllers\PokazController::class,'create'])->name('pokaz.create');
-Route::get('/create/{flag_prev}',[\App\Http\Controllers\PokazController::class,'create'])->name('pokaz.create_flag');
+//Route::get('/create/{flag_prev}',[\App\Http\Controllers\PokazController::class,'create'])->name('pokaz.create_flag');
 Route::post('/store',[\App\Http\Controllers\PokazController::class,'store'])->name('pokaz.store');
+
+Route::get('/adminCreate',[\App\Http\Controllers\PokazController::class,'adminCreate'])->name('pokaz.adminCreate');
+Route::post('/adminStore',[\App\Http\Controllers\PokazController::class,'adminStore'])->name('pokaz.adminStore');
 
 Route::get('/createEmail',[\App\Http\Controllers\EmailController::class,'create'])->name('email.create');
 Route::post('/storeEmail',[\App\Http\Controllers\EmailController::class,'store'])->name('email.store');
@@ -39,7 +42,18 @@ Route::post('/updateTarif',[\App\Http\Controllers\TarifController::class,'update
 
 Route::get('/calc',[\App\Http\Controllers\PokazController::class,'calc'])->name('pokaz.calc');
 
-Route::get('/list/{user_id}',[\App\Http\Controllers\PokazController::class,'list'])->name('pokaz.list');
+Route::get('/list/{flat}',[\App\Http\Controllers\PokazController::class,'list'])->name('pokaz.list');
+Route::get('/listAll',[\App\Http\Controllers\PokazController::class,'listAll'])->name('pokaz.listAll');
+Route::post('/listAllProc',[\App\Http\Controllers\PokazController::class,'listAllProc'])->name('pokaz.listAllProc');
+
+Route::get('/createCounter',[\App\Http\Controllers\CounterController::class,'create'])->name('counter.create');
+Route::post('/storeCounter',[\App\Http\Controllers\CounterController::class,'store'])->name('counter.store');
+/*
+Route::prefix('counter')->group(function(){
+    Route::get('/createCounter',\App\Http\Controllers\CounterController::class,'create')->name('counter.create');
+    Route::post('/store',\App\Http\Controllers\CounterController::class,'store')->name('counter.store');
+});
+*/
 
 //создание pdf-документов
 Route::get('pdf/preview', [\App\Http\Controllers\GenerateController::class, 'preview'])->name('pdf.preview');

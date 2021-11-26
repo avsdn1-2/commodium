@@ -20,12 +20,10 @@ class GenerateController extends Controller
 
     public function generatePDF($month)
     {
-        $user_id = Auth::user()->id;
-
         //если в кеше содержится информацию о клиенте за данный отчетный год, то достаем ее из кеша
-        if (Cache::has($user_id))
+        if (Cache::has(Auth::user()->id))
         {
-            $html = Cache::get($user_id);
+            $html = Cache::get(Auth::user()->id);
         }
 
         //создаем pdf-документ для выгрузки в файл

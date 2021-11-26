@@ -1,4 +1,8 @@
 <x-app-layout>
+    @if (isset($message))
+        <div style="width:300px;border:1px solid red;border-radius:5px;color:red;margin:0 auto"><p style="margin:0 0 0 10px">{{ $message }}</p></div>
+    @endif
+
     @if (isset($error_message))
         <div style="width:300px;border:1px solid red;border-radius:5px;color:red;margin:0 auto"><p style="margin:0 0 0 10px">{{ $error_message }}</p></div>
     @endif

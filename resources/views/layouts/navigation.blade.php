@@ -51,7 +51,7 @@
 
                     @auth
                         <div class="" style="width:420px;position:relative;top:4px;float:left;text-align:center;/*border:1px solid red*/">
-                            <a href="/list/{{Auth::user()->id}}" :active="request()->routeIs('pokaz.list')" class="height-30 underline">
+                            <a href="/listAll" :active="request()->routeIs('pokaz.listAll')" class="height-30 underline">
                                 {{ __('История показаний') }}
                             </a>
 
@@ -74,6 +74,17 @@
                                 <a id="flat" href="/createFlat" :active="request()->routeIs('flat.create')" class="height-30 underline" style="margin:0 0 0 30px;">
                                     {{ __('Квартиры') }}
                                 </a>
+                                <div style="clear:both"></div>
+                            @endif
+                            @if (in_array(Auth::user()->role,['admin','superadmin']))
+                                 <a id="adminPokaz" href="/adminCreate" :active="request()->routeIs('pokaz.adminCreate')" class="height-30 underline" style="margin:0 0 0 30px;">
+                                    {{ __('Внести показания как Админ') }}
+                                 </a>
+
+                                <a id="counter" href="/createCounter" :active="request()->routeIs('counter.create')" class="height-30 underline" style="margin:0 0 0 30px;">
+                                    {{ __('Внести показания общедомового счетчика тепла') }}
+                                </a>
+
                             @endif
                         </div>
                     @endauth

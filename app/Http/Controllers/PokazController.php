@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Pokaz;
 use App\Models\Tarif;
 use App\Models\Flat;
+use App\Services\HelpService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,6 +14,12 @@ use Illuminate\Support\Facades\Cache;
 
 class PokazController extends Controller
 {
+    private $helpService;
+
+    public function __construct(HelpService $helpService)
+    {
+        $this->helpService = $helpService;
+    }
     /**
      * Display a listing of the resource.
      *
@@ -39,7 +46,7 @@ class PokazController extends Controller
         $rep_month_prev = $result['rep_month_prev'];
         $rep_year_prev = $result['rep_year_prev'];
 
-        $pokaz = Pokaz::where('user_id',$user->id)->where('year',$rep_year)->where('month',$rep_month)->get()->first();
+        $pokaz = Pokaz::where('flat',$user->flat)->where('year',$rep_year)->where('month',$rep_month)->get()->first();
         if ($pokaz !== null){
             $warm = $pokaz->warm;
             $water = $pokaz->water;
@@ -47,7 +54,7 @@ class PokazController extends Controller
             $warm = null;
             $water = null;
         }
-        $pokaz_prev = Pokaz::where('user_id',$user->id)->where('year',$rep_year_prev)->where('month',$rep_month_prev)->get()->first();
+        $pokaz_prev = Pokaz::where('flat',$user->flat)->where('year',$rep_year_prev)->where('month',$rep_month_prev)->get()->first();
         if ($pokaz_prev !== null){
             $warm_prev = $pokaz_prev->warm;
             $water_prev = $pokaz_prev->water;
@@ -57,7 +64,7 @@ class PokazController extends Controller
         }
 
         return view('pokaz.create', [
-            'user_id' => $user->id,
+            'flat' => $user->flat,
             'rep_year' => $rep_year,
             'rep_month' => $rep_month,
             'rep_month_prev' => $rep_month_prev,
@@ -70,6 +77,7 @@ class PokazController extends Controller
             'warm_prev' => $warm_prev,
             'water_prev' => $water_prev,
         ]);
+
 
     }
 
@@ -98,7 +106,7 @@ class PokazController extends Controller
         //если введены предыдущие показания, то сохраняем их
         if ($request->get('water_prev') > 0 && $request->get('warm_prev') > 0){
             $pokaz_prev = new Pokaz();
-            $pokaz_prev->user_id = Auth::user()->id;
+            $pokaz_prev->flat = $user->flat;
             $pokaz_prev->year = $rep_year_prev;
             $pokaz_prev->month = $rep_month_prev;
             $pokaz_prev->water = $request->get('water_prev');
@@ -112,12 +120,86 @@ class PokazController extends Controller
         }
 
         //проверяем, есть ли введенные показания за отчетный период
-        $pokaz = Pokaz::where('user_id',$user->id)->where('year',$rep_year)->where('month',$rep_month)->get()->first();
+        $pokaz = Pokaz::where('flat',$user->flat)->where('year',$rep_year)->where('month',$rep_month)->get()->first();
 
         //если нет введенных показаний за отчетный период, то сохраняем их
         if ($pokaz == null){
             $pokaz = new Pokaz();
-            $pokaz->user_id = Auth::user()->id;
+            $pokaz->flat = $user->flat;
+            $pokaz->year = $rep_year;
+            $pokaz->month = $rep_month;
+            $pokaz->water = $request->get('water');
+            $pokaz->warm = $request->get('warm');
+            $pokaz->save();
+            //$this->helpService->setPreviousRoute();
+        } else { //если есть введенные показания за отчетный период, то сохраняем, если введены большие показания; если введены меньшие, то показываем ошибку
+            if ($request->get('water') >= $pokaz->water && $request->get('warm') >= $pokaz->warm){
+                $pokaz->water = $request->get('water');
+                $pokaz->warm = $request->get('warm');
+                $pokaz->save();
+                //$this->helpService->setPreviousRoute();
+
+
+
+            } else {
+                $error_message = "Вы вводите меньшие показания по сравнению с введенными ранее!";
+                return view('pokaz.create', [
+                    'error_message' => $error_message,
+                    'rep_year' => $rep_year,
+                    'rep_month' => $rep_month,
+                    'day' => $day,
+                    'start_pokaz_period' => Pokaz::START_POKAZ_PERIOD,
+                    'end_pokaz_period' => Pokaz::END_POKAZ_PERIOD,
+                    'warm' => $pokaz->warm,
+                    'water' => $pokaz->water,
+                   // 'warm_prev' => $warm_prev,
+                   // 'water_prev' => $water_prev,
+                ]);
+            }
+        }
+
+        return redirect(route('pokaz.list', ['flat' => Auth::user()->flat]));
+    }
+    /*
+    public function store(Request $request)
+    {
+        $this->validate($request, [
+            'water' => 'required|integer',
+            'warm' => 'nullable|integer',
+            'water_prev' => 'integer',
+            'warm_prev' => 'integer'
+        ]);
+        $user = auth()->user();
+        $result = Pokaz::getRepPeriod();
+        $day = $result['day'];
+        $rep_month = $result['rep_month'];
+        $rep_year = $result['rep_year'];
+        $rep_month_prev = $result['rep_month_prev'];
+        $rep_year_prev = $result['rep_year_prev'];
+
+        //если введены предыдущие показания, то сохраняем их
+        if ($request->get('water_prev') > 0 && $request->get('warm_prev') > 0){
+            $pokaz_prev = new Pokaz();
+            $pokaz_prev->flat = $user->flat;
+            $pokaz_prev->year = $rep_year_prev;
+            $pokaz_prev->month = $rep_month_prev;
+            $pokaz_prev->water = $request->get('water_prev');
+            $pokaz_prev->warm = $request->get('warm_prev');
+            $pokaz_prev->save();
+            $water_prev = $request->get('water_prev');
+            $warm_prev = $request->get('warm_prev');
+        } else {
+            //$water_prev = 0;
+            //$warm_prev = 0;
+        }
+
+        //проверяем, есть ли введенные показания за отчетный период
+        $pokaz = Pokaz::where('flat',$user->flat)->where('year',$rep_year)->where('month',$rep_month)->get()->first();
+
+        //если нет введенных показаний за отчетный период, то сохраняем их
+        if ($pokaz == null){
+            $pokaz = new Pokaz();
+            $pokaz->flat = $user->flat;
             $pokaz->year = $rep_year;
             $pokaz->month = $rep_month;
             $pokaz->water = $request->get('water');
@@ -132,7 +214,6 @@ class PokazController extends Controller
                 $error_message = "Вы вводите меньшие показания по сравнению с введенными ранее!";
                 return view('pokaz.create', [
                     'error_message' => $error_message,
-                    'user_id' => $user->id,
                     'rep_year' => $rep_year,
                     'rep_month' => $rep_month,
                     'day' => $day,
@@ -140,90 +221,129 @@ class PokazController extends Controller
                     'end_pokaz_period' => Pokaz::END_POKAZ_PERIOD,
                     'warm' => $pokaz->warm,
                     'water' => $pokaz->water,
-                   // 'warm_prev' => $warm_prev,
-                   // 'water_prev' => $water_prev,
+                    // 'warm_prev' => $warm_prev,
+                    // 'water_prev' => $water_prev,
                 ]);
             }
         }
 
-        return redirect(route('pokaz.list', ['user_id' => Auth::user()->id]));
+        return redirect(route('pokaz.list', ['flat' => Auth::user()->flat]));
+    }
+    */
+
+    public function adminCreate()
+    {
+        $result = Pokaz::getRepPeriodAdmin();
+
+        return view('pokaz.adminCreate', [
+            'rep_month' => $result['rep_month'],
+            'rep_year' => $result['rep_year'],
+        ]);
     }
 
-    public function list($user_id)
+    public function adminStore(Request $request)
     {
-        $pokazs = Pokaz::where('user_id',$user_id)->orderBy('id','desc')->get();
+        $rules = [
+            'flat' => 'required|string|max:3|regex:#^[0-9А-Яа-я]+$#',
+            'year' => 'required|integer',
+            'month' => 'required|integer',
+            'water' => 'required|integer',
+            'warm' => 'nullable|integer'
+        ];
+        try {
+            $validatedData = $request->validate($rules);
+        } catch (\ValidationException $exception) {
+            return back()->withErrors(['msg' => $exception->getMessage()])->withInput();
+        }
+
+        $pokaz = Pokaz::where('flat',$request->get('flat'))->where('year',$request->get('year'))->where('month',$request->get('month'))->get()->first();
+        if ($pokaz == null){
+            $pokaz = new Pokaz();
+            $pokaz->flat = $request->get('flat');
+            $pokaz->year = $request->get('year');
+            $pokaz->month = $request->get('month');
+            $pokaz->water = $request->get('water');
+            $pokaz->warm = $request->get('warm');
+            $error_save = !$pokaz->save();
+            $error_message = '';
+            //dd($error_save);
+        } else {
+            $error_message = 'Показания для этой квартиры за указанный период уже переданы!';
+            $error_save = false;
+        }
+
+
+        return view('pokaz.adminCreate', [
+            'error_message' => $error_message,
+            'error_save' => $error_save,
+            'flat' => $request->get('flat'),
+            'rep_month' => $request->get('month'),
+            'rep_year' => $request->get('year'),
+        ]);
+    }
+
+    public function list($flat)
+    {
+        $pokazs = Pokaz::where('flat',$flat)->orderBy('id','desc')->get();
 
         return view('pokaz.list', [
              'pokazs' => $pokazs,
         ]);
     }
 
+    public function listAll()
+    {
+        $result = Pokaz::getRepPeriodAdmin();
+
+        return view('pokaz.listAll', [
+          //  'pokazs' => $pokazs,
+            'rep_month' => $result['rep_month'],
+            'rep_year' => $result['rep_year'],
+        ]);
+    }
+
+    public function listAllProc(Request $request)
+    {
+        $rules = [
+            'year' => 'required|integer',
+            'month' => 'required|integer',
+           // 'volume' => 'required|in(["my","all"])',
+        ];
+        try {
+            $validatedData = $request->validate($rules);
+        } catch (\ValidationException $exception) {
+            return back()->withErrors(['msg' => $exception->getMessage()])->withInput();
+        }
+
+        $result = Pokaz::getRepPeriodAdmin();
+
+        $data = Pokaz::getData($request->get('volume'),$request->get('year'),$request->get('month'));
+
+        return view('pokaz.listAll', [
+            'pokazs' => $data['pokazs'],
+            'prev' => $data['prev'],
+            'total' => $data['total'],
+            'counter' => $data['counter'],
+            'counter_prev' => $data['counter_prev'],
+            'rep_month' => $result['rep_month'],
+            'rep_year' => $result['rep_year'],
+        ]);
+    }
+
     public function calc()
     {
-        /*
-        $date = date('Y-m-d',time());
-        $year = date('Y',strtotime($date));
-        $month = date('n',strtotime($date));
-        $date_prev = Carbon::createFromFormat('Y-m-d', $date)->subMonth()->format('Y-m-d');
-        $year_prev = date('Y',strtotime($date_prev));
-        $month_prev = date('n',strtotime($date_prev));
-        $user_id = Auth::user()->id;
-        //dd($user_id);
-        */
-        /*
-        var_dump($year);
-        var_dump($month);
-        var_dump($year_prev);
-        var_dump($month_prev);
-        */
-        $user_id = Auth::user()->id;
-        $user_flat = Auth::user()->flat;
-
         $periodParams = Pokaz::getRepPeriod();
-        /*
-        $day = $result['day'];
-        $rep_month = $result['rep_month'];
-        $rep_year = $result['rep_year'];
-        $rep_month_prev = $result['rep_month_prev'];
-        $rep_year_prev = $result['rep_year_prev'];
-        */
-
-        $pokaz = Pokaz::where('user_id',$user_id)->where('year',$periodParams['rep_year'])->where('month',$periodParams['rep_month'])->first();
-        //dd($pokaz);
-        $pokaz_prev = Pokaz::where('user_id',$user_id)->where('year',$periodParams['rep_year_prev'])->where('month',$periodParams['rep_month_prev'])->first();
+        $pokaz = Pokaz::where('flat',Auth::user()->flat)->where('year',$periodParams['rep_year'])->where('month',$periodParams['rep_month'])->first();
+        $pokaz_prev = Pokaz::where('flat',Auth::user()->flat)->where('year',$periodParams['rep_year_prev'])->where('month',$periodParams['rep_month_prev'])->first();
         $tarif = Tarif::find(1);
-        $flat = Flat::where('number',$user_flat)->first();
-        $payment = [
-            'day' => $periodParams['day'],
-            'month' => $periodParams['rep_month'],
-            'month_m' =>  $periodParams['rep_month_m'],
-            'flat' => $flat->number,
-            'fio' => $flat->name . ' ' . mb_substr($flat->first_name,0,1) . '.' . mb_substr($flat->mid_name,0,1) . '.',
-            'month_name' => Pokaz::getMonthName($periodParams['rep_month']),
-            'water_tarif' => $tarif->water,
-            'service_tarif' => $tarif->service,
-            'square' => $flat->square,
-            'warmCounter' => $flat->warmCounter,
-            'year' => $periodParams['rep_year'],
-            'water' => ($pokaz->water - $pokaz_prev->water) * $tarif->water,
-            'warm' => $flat->warmCounter == true? number_format(round(($pokaz->warm - $pokaz_prev->warm) / 1163.06 * $tarif->warm * 1.1,2),2,'.',' ') : 3000,
-            'warm_current' => number_format($pokaz->warm,0,'.',' '),
-            'warm_previous' => number_format($pokaz_prev->warm,0,'.',' '),
-            'service' => round($flat->square * $tarif->service,0),
-            'lift' => $tarif->lift,
-            'rubbish' => $tarif->rubbish,
-            'parkingCleaning' => $tarif->parkingCleaning,
-            'parkingLightening' => $tarif->parkingLightening,
-            'cons' => $tarif->cons
-        ];
-        $payment['total'] = $payment['service'] + $payment['lift'] + $payment['rubbish'] + $payment['water'] +
-            $payment['parkingCleaning'] + $payment['parkingLightening'];
+        $flat = Flat::where('number',Auth::user()->flat)->first();
 
+        $payment = Pokaz::getPayment($pokaz,$pokaz_prev,$tarif,$flat,$periodParams);
 
         $html = Pokaz::formatInvoice($payment);
 
         //сохраняем в кеш подготовленную html-строку для последующего скачивания в pdf
-        Cache::put($user_id, $html, Pokaz::REFRESH_TIME);
+        Cache::put(Auth::user()->id, $html, Pokaz::REFRESH_TIME);
 
         return view('pokaz.calc', [
             'payment' => $payment,

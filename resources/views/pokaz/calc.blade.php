@@ -55,37 +55,38 @@
         </table>
     </div>
 
-    <div style="width:120px;font-weight:bold;margin:0 auto">ОПАЛЕННЯ</div>
-    <div style="width:800px;margin:0 auto">
-        <table class="table table-striped">
-            <thead>
-            <tr>
-                <th scope="col" style="width:70px;text-align:center">Кв-ра</th>
-                <th scope="col" style="width:180px;text-align:center">ПІБ</th>
-                <th scope="col" style="width:60px;text-align:center">кв. м</th>
-                <th scope="col" style="width:100px;text-align:center">Ліч-ник</th>
-                <th scope="col" style="width:110px;text-align:center">Сума</th>
-                <th scope="col" colspan="2" style="width:60px;text-align:center">Показання лічильника<br>попер/поточні</th>
-            </tr>
-            </thead>
+    @if ($payment['warm'] !== 0)
+        <div style="width:120px;font-weight:bold;margin:0 auto">ОПАЛЕННЯ</div>
+        <div style="width:800px;margin:0 auto">
+            <table class="table table-striped">
+                <thead>
+                <tr>
+                    <th scope="col" style="width:70px;text-align:center">Кв-ра</th>
+                    <th scope="col" style="width:180px;text-align:center">ПІБ</th>
+                    <th scope="col" style="width:60px;text-align:center">кв. м</th>
+                    <th scope="col" style="width:100px;text-align:center">Ліч-ник</th>
+                    <th scope="col" style="width:110px;text-align:center">Сума</th>
+                    <th scope="col" colspan="2" style="width:60px;text-align:center">Показання лічильника<br>попер/поточні</th>
+                </tr>
+                </thead>
 
-            <tbody>
-            <tr>
-                <td style="text-align:center">{{ $payment['flat'] }}</td>
-                <td style="text-align:center">{{ $payment['fio'] }} </td>
-                <td style="text-align:center">{{ $payment['square'] }}</td>
-                <td style="text-align:center">{{ $payment['warmCounter'] == 1? 'є': 'нема' }}</td>
-                <td style="text-align:center">{{ $payment['warm'] }}</td>
-                <td style="text-align:center">{{ $payment['warm_previous'] }}</td>
-                <td style="text-align:center">{{ $payment['warm_current'] }}</td>
-            </tr>
-            </tbody>
-        </table>
-
-        <div class="text-center pdf-btn">
-            <a href="{{ route('pdf.generate',['month'=>$payment['month_m']]) }}" class="btn btn-primary">Сформувати PDF</a>
+                <tbody>
+                <tr>
+                    <td style="text-align:center">{{ $payment['flat'] }}</td>
+                    <td style="text-align:center">{{ $payment['fio'] }} </td>
+                    <td style="text-align:center">{{ $payment['square'] }}</td>
+                    <td style="text-align:center">{{ $payment['warmCounter'] == 1? 'є': 'нема' }}</td>
+                    <td style="text-align:center">{{ $payment['warm'] }}</td>
+                    <td style="text-align:center">{{ $payment['warm_previous'] }}</td>
+                    <td style="text-align:center">{{ $payment['warm_current'] }}</td>
+                </tr>
+                </tbody>
+            </table>
         </div>
+    @endif
 
+    <div class="text-center pdf-btn">
+        <a href="{{ route('pdf.generate',['month'=>$payment['month_m']]) }}" class="btn btn-primary">Сформувати PDF</a>
     </div>
 </x-app-layout>
 

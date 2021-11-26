@@ -5,18 +5,24 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon as Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class Pokaz extends Model
 {
     use HasFactory;
     const START_POKAZ_PERIOD = 24;
     const END_POKAZ_PERIOD = 2;
+    const WARM_MULTIPLIER = 1.1;
     const REFRESH_TIME = 1800;
 
     protected $fillable = [
         'water',
         'warm'
     ];
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 
     public static function getRepPeriod(){
         function getMonthYear($day,$month,$year){
@@ -75,13 +81,114 @@ class Pokaz extends Model
         return $result;
     }
 
-
-
-
-    public function user()
+    public static function getRepPeriodAdmin()
     {
-        return $this->belongsTo(User::class);
+        $year = (int)date('Y',time());
+        $month = (int)date('n',time());
+        $day = (int)date('j',time());
+
+        $date = date('Y-m-d',time());
+        $date_prev = Carbon::createFromFormat('Y-m-d', $date)->subMonth()->format('Y-m-d');
+
+        if ($day >= self::START_POKAZ_PERIOD){
+            $rep_month = $month;
+            $rep_year = $year;
+        } else {
+            $rep_month = (int)date('n',strtotime($date_prev));
+            $rep_year = (int)date('Y',strtotime($date_prev));
+        }
+        return [
+            'rep_month' => $rep_month,
+            'rep_year' => $rep_year,
+            'rep_month_prev' => self::getPrevMonthYear($rep_year,$rep_month)['month'],
+            'rep_year_prev' => self::getPrevMonthYear($rep_year,$rep_month)['year']
+        ];
     }
+
+    public static function getPrevMonthYear($year,$month)
+    {
+        if ($month == 1){
+            return [
+                'year' => $year - 1,
+                'month' => 12
+            ];
+        } else{
+            return [
+                'year' => $year,
+                'month' => $month - 1
+            ];
+        }
+    }
+
+    public static function formatMonth($month)
+    {
+        if (in_array($month,[10,11,12])){
+            return $month;
+        } else {
+            return '0' . $month;
+        }
+    }
+    public static function getData($volume,$year,$month)
+    {
+        if ($volume == 'all'){
+            $pokazs = Pokaz::where('year',$year)->where('month',$month)->get();
+            $pokazs_prev = Pokaz::where('year',self::getPrevMonthYear($year,$month)['year'])->where('month',self::getPrevMonthYear($year,$month)['month'])->get();
+        } else {
+            $pokazs = Pokaz::where('year',$year)->where('month',$month)->where('flat',Auth::user()->flat)->get();
+            $pokazs_prev = Pokaz::where('year',self::getPrevMonthYear($year,$month)['year'])->where('month',self::getPrevMonthYear($year,$month)['month'])->where('flat',Auth::user()->flat)->get();
+        }
+
+        $prev = [];
+        foreach ($pokazs_prev as $pokaz)
+        {
+            $prev[$pokaz->flat] = $pokaz->warm;
+        }
+        $total = 0;
+        foreach ($pokazs as $pokaz)
+        {
+            $total += $pokaz->warm - $prev[$pokaz->flat];
+        }
+        return [
+            'pokazs' => $pokazs,
+            'prev' => $prev,
+            'total' => $total,
+            'counter' => Counter::where('year',$year)->where('month',$month)->first()->warm,
+            'counter_prev' => Counter::where('year',self::getPrevMonthYear($year,$month)['year'])->where('month',self::getPrevMonthYear($year,$month)['month'])->first()->warm,
+
+        ];
+    }
+
+
+    public static function getPayment($pokaz,$pokaz_prev,$tarif,$flat,$periodParams)
+    {
+        $payment = [
+            'day' => $periodParams['day'],
+            'month' => $periodParams['rep_month'],
+            'month_m' =>  $periodParams['rep_month_m'],
+            'flat' => $flat->number,
+            'fio' => $flat->name . ' ' . mb_substr($flat->first_name,0,1) . '.' . mb_substr($flat->mid_name,0,1) . '.',
+            'month_name' => Pokaz::getMonthName($periodParams['rep_month']),
+            'water_tarif' => $tarif->water,
+            'service_tarif' => $tarif->service,
+            'square' => $flat->square,
+            'warmCounter' => $flat->warmCounter,
+            'year' => $periodParams['rep_year'],
+            'water' => ($pokaz->water - $pokaz_prev->water) * $tarif->water,
+            'warm' => $flat->warmCounter == true? ($pokaz->warm !== null? number_format(round(($pokaz->warm - $pokaz_prev->warm) / 1163.06 * $tarif->warm * self::WARM_MULTIPLIER,2),2,'.',' '): 0 ) : 3000,
+            'warm_current' => number_format($pokaz->warm,0,'.',' '),
+            'warm_previous' => number_format($pokaz_prev->warm,0,'.',' '),
+            'service' => round($flat->square * $tarif->service,0),
+            'lift' => $tarif->lift,
+            'rubbish' => $tarif->rubbish,
+            'parkingCleaning' => $tarif->parkingCleaning,
+            'parkingLightening' => $tarif->parkingLightening,
+            'cons' => $tarif->cons
+        ];
+        $payment['total'] = $payment['service'] + $payment['lift'] + $payment['rubbish'] + $payment['water'] +
+            $payment['parkingCleaning'] + $payment['parkingLightening'];
+        return $payment;
+    }
+
 
     public static function formatInvoice($payment)
     {
@@ -195,46 +302,40 @@ class Pokaz extends Model
             </tr>
             </tbody>
         </table>
-        </div>
-        <div style="width:120px;font-weight:bold;margin:0 auto">ОПАЛЕННЯ</div>
-        <div style="width:700px;margin:0 auto">
-        <table class="table table-striped">
-            <thead>
-            <tr>
-                <th scope="col" class="w_40" style="text-align:center">Кв-ра</th>
-                <th scope="col" class="w_170">ПІБ</th>
-                <th scope="col" class="w_40">кв. м</th>
-                <th scope="col" class="w_70">Лічильник</th>
-                <th scope="col" class="w_70">Сума</th>
-                <th scope="col" class="w_140" colspan="2" style="text-align:center">Показання лічильника<br>попер./поточні</th>
-            </tr>
-            </thead>
+        </div>';
 
-            <tbody>
-            <tr>
-                <td>' . $payment['flat'] . '</td>
-                <td>' . $payment['fio'] . '</td>
-                <td>' . $payment['square'] . '</td>
-                <td>' . ($payment['warmCounter'] == 1? 'є': 'нема') . '</td>
-                <td>' . $payment['warm'] . '</td>
-                <td>' . $payment['warm_previous'] . '</td>
-                <td>' . $payment['warm_current'] . '</td>
-            </tr>
-            </tbody>
-        </table>
+        if ($payment['warm'] !== 0) {
+            $html .=
+               '<div style="width:120px;font-weight:bold;margin:0 auto">ОПАЛЕННЯ</div>
+                <div style="width:700px;margin:0 auto">
+                    <table class="table table-striped">
+                        <thead>
+                        <tr>
+                            <th scope="col" class="w_40" style="text-align:center">Кв-ра</th>
+                            <th scope="col" class="w_170">ПІБ</th>
+                            <th scope="col" class="w_40">кв. м</th>
+                            <th scope="col" class="w_70">Лічильник</th>
+                            <th scope="col" class="w_70">Сума</th>
+                            <th scope="col" class="w_140" colspan="2" style="text-align:center">Показання лічильника<br>попер./поточні</th>
+                        </tr>
+                        </thead>
 
+                        <tbody>
+                        <tr>
+                            <td>' . $payment['flat'] . '</td>
+                            <td>' . $payment['fio'] . '</td>
+                            <td>' . $payment['square'] . '</td>
+                            <td>' . ($payment['warmCounter'] == 1 ? 'є' : 'нема') . '</td>
+                            <td>' . $payment['warm'] . '</td>
+                            <td>' . $payment['warm_previous'] . '</td>
+                            <td>' . $payment['warm_current'] . '</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>';
+            }
 
-
-        </div>
-
-
-
-    </div>';
-        $html .= '</body></head></html>';
-
-
-
-
+        $html .= '</div></body></head></html>';
 
         return $html;
     }
@@ -325,7 +426,7 @@ class Pokaz extends Model
         mail($to,$subject,$multipart,$mailheaders);
 
         // удаление файла
-        unlink($filepath);
+        //unlink($filepath);
 
     }
 }

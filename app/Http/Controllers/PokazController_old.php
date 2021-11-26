@@ -132,6 +132,15 @@ class PokazController extends Controller
         ]);
     }
 
+    public function listAll()
+    {
+        //$pokazs = Pokaz::where('user_id',$user_id)->get();
+
+        return view('pokaz.listAll', [
+            //'pokazs' => $pokazs,
+        ]);
+    }
+
     public function calc(Pokaz $pokaz)
     {
         $periodParams = $pokaz->getPeriodParams();

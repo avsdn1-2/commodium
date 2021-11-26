@@ -12,27 +12,27 @@
             <div>История показаний</div>
 
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 bg-white border-b border-gray-200">
-                    <div style="width:320px">
-                        <div style="width:75px;float:left;">Год</div>
-                        <div style="width:75px;float:left;">Месяц</div>
-                        <div style="width:75px;float:left;">Вода</div>
-                        <div style="width:75px;float:right;">Тепло</div>
-                    </div>
-                    <ul class="list-disc">
-                    @foreach($pokazs as $pokaz)
-                        <div style="width:550px;height:25px;margin-bottom:5px/*border:1px solid green*/">
-                            <div style="width:320px;float:left">
-                                <div style="width:75px;float:left;">{{ $pokaz->year }}</div>
-                                <div style="width:75px;float:left;">{{ $pokaz->month }}</div>
-                                <div style="width:75px;float:left;">{{ $pokaz->water }}</div>
-                                <div style="width:75px;float:right;">{{ $pokaz->warm }}</div>
-                            </div>
+                <table class="table table-striped">
+                    <thead>
+                    <tr>
+                        <th scope="col" style="width:70px;text-align:center">Год</th>
+                        <th scope="col" style="width:180px;text-align:center">Месяц</th>
+                        <th scope="col" style="width:60px;text-align:center">Вода</th>
+                        <th scope="col" style="width:100px;text-align:center">Тепло</th>
+                    </tr>
+                    </thead>
 
-                        </div>
+                    <tbody>
+                    @foreach($pokazs as $pokaz)
+                        <tr>
+                            <td style="text-align:center">{{ $pokaz->year }}</td>
+                            <td style="text-align:center">{{ $pokaz->month }} </td>
+                            <td style="text-align:center">{{ $pokaz->water }}</td>
+                            <td style="text-align:center">{{ $pokaz->warm }}</td>
+                        </tr>
                     @endforeach
-                    </ul>
-                </div>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
