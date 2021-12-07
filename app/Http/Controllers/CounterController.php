@@ -7,6 +7,7 @@ use App\Models\Pokaz;
 use App\Services\HelpService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class CounterController extends Controller
 {
@@ -34,10 +35,13 @@ class CounterController extends Controller
      */
     public function create()
     {
+        if (!Auth::user()->is_manager || !Auth::user()->is_admin ) {
+            abort(403,'Доступ запрещен!');
+        }
         $result = Pokaz::getRepPeriodAdmin();
         $message = $this->helpService->getPreviousRoute('counter.store');
 
-        return view('counter.create', [
+        return view('admin.counter.create', [
             'message' => $message,
             'rep_month' => $result['rep_month'],
             'rep_year' => $result['rep_year'],
@@ -53,6 +57,9 @@ class CounterController extends Controller
      */
     public function store(Request $request)
     {
+        if (!Auth::user()->is_manager || !Auth::user()->is_admin ) {
+            abort(403,'Доступ запрещен!');
+        }
         $rules = [
             'year' => 'required|integer',
             'month' => 'required|integer',

@@ -40,12 +40,12 @@ class TarifController extends Controller
      */
     public function edit(Tarif $tarif)
     {
-        if (Auth::user()->role !== 'superadmin') {
+        if (!Auth::user()->is_admin ) {
             abort(403,'Доступ запрещен!');
         }
         $tarif = Tarif::find(1);
 
-        return view('tarif.edit', [
+        return view('admin.tarif.edit', [
                     'tarif' => $tarif
                             ]);
     }
@@ -59,6 +59,9 @@ class TarifController extends Controller
      */
     public function update(Request $request, Tarif $tarif)
     {
+        if (!Auth::user()->is_admin ) {
+            abort(403,'Доступ запрещен!');
+        }
         $rules = [
             'water' => 'required|numeric',
             'warm' => 'required|numeric',
@@ -92,9 +95,12 @@ class TarifController extends Controller
 
         $tarif->save();
 
-        return view('tarif.update', [
-                'tarif' => $tarif
+        //return redirect(route('tarif.edit'));
+
+        return view('admin.tarif.update', [
+               // 'tarif' => $tarif
         ]);
+
     }
 
     /**

@@ -9,13 +9,12 @@ use Illuminate\Support\Facades\Auth;
 
 class EmailController extends Controller
 {
-    //
     public function create()
     {
-
-
-        return view('email.create', [
-
+        if (!Auth::user()->is_manager || !Auth::user()->is_admin ) {
+            abort(403,'Доступ запрещен!');
+        }
+        return view('admin.email.create', [
         ]);
     }
 
@@ -27,12 +26,14 @@ class EmailController extends Controller
      */
     public function store(Request $request)
     {
+        if (!Auth::user()->is_manager || !Auth::user()->is_admin ) {
+            abort(403,'Доступ запрещен!');
+        }
         try {
             $request->validate([
                 'email' => 'required|string|email|max:255|unique:emails'
             ]);
         } catch (\ValidationException $exception) {
-            //dd($exception->getMessage());
             return redirect('create');
         }
 

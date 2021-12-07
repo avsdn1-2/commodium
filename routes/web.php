@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PDFController;
+//use App\Http\Controllers;
 
 /*
 |--------------------------------------------------------------------------
@@ -23,37 +24,13 @@ Route::get('/dashboard', function () {
 })->middleware(['auth'])->name('dashboard');
 
 Route::get('/create',[\App\Http\Controllers\PokazController::class,'create'])->name('pokaz.create');
-//Route::get('/create/{flag_prev}',[\App\Http\Controllers\PokazController::class,'create'])->name('pokaz.create_flag');
 Route::post('/store',[\App\Http\Controllers\PokazController::class,'store'])->name('pokaz.store');
-
-Route::get('/adminCreate',[\App\Http\Controllers\PokazController::class,'adminCreate'])->name('pokaz.adminCreate');
-Route::post('/adminStore',[\App\Http\Controllers\PokazController::class,'adminStore'])->name('pokaz.adminStore');
-
-Route::get('/createEmail',[\App\Http\Controllers\EmailController::class,'create'])->name('email.create');
-Route::post('/storeEmail',[\App\Http\Controllers\EmailController::class,'store'])->name('email.store');
-
-Route::get('/createFlat',[\App\Http\Controllers\FlatController::class,'create'])->name('flat.create');
-Route::post('/storeFlat',[\App\Http\Controllers\FlatController::class,'store'])->name('flat.store');
-
-Route::get('/createTarif',[\App\Http\Controllers\TarifController::class,'create'])->name('tarif.create');
-Route::post('/storeTarif',[\App\Http\Controllers\TarifController::class,'store'])->name('tarif.store');
-Route::get('/editTarif',[\App\Http\Controllers\TarifController::class,'edit'])->name('tarif.edit');
-Route::post('/updateTarif',[\App\Http\Controllers\TarifController::class,'update'])->name('tarif.update');
 
 Route::get('/calc',[\App\Http\Controllers\PokazController::class,'calc'])->name('pokaz.calc');
 
-Route::get('/list/{flat}',[\App\Http\Controllers\PokazController::class,'list'])->name('pokaz.list');
-Route::get('/listAll',[\App\Http\Controllers\PokazController::class,'listAll'])->name('pokaz.listAll');
-Route::post('/listAllProc',[\App\Http\Controllers\PokazController::class,'listAllProc'])->name('pokaz.listAllProc');
+Route::get('/list',[\App\Http\Controllers\PokazController::class,'list'])->name('pokaz.list');
+Route::post('/info',[\App\Http\Controllers\PokazController::class,'info'])->name('pokaz.info');
 
-Route::get('/createCounter',[\App\Http\Controllers\CounterController::class,'create'])->name('counter.create');
-Route::post('/storeCounter',[\App\Http\Controllers\CounterController::class,'store'])->name('counter.store');
-/*
-Route::prefix('counter')->group(function(){
-    Route::get('/createCounter',\App\Http\Controllers\CounterController::class,'create')->name('counter.create');
-    Route::post('/store',\App\Http\Controllers\CounterController::class,'store')->name('counter.store');
-});
-*/
 
 //создание pdf-документов
 Route::get('pdf/preview', [\App\Http\Controllers\GenerateController::class, 'preview'])->name('pdf.preview');
@@ -61,5 +38,39 @@ Route::get('pdf/generate/{month}', [\App\Http\Controllers\GenerateController::cl
 
 //тестовый роут для экспериментов
 Route::get('/test',[\App\Http\Controllers\TestController::class,'index'])->name('test.index');
+
+// Admin Panel
+Route::group(['prefix' => 'admin-panel'], function () {
+    Route::get('/', [\App\Http\Controllers\AdminController::class, 'index'])->name('admin.index'); // 'middleware' => ['auth', 'admin-panel']
+
+    // Pokazs
+    Route::prefix('pokazs')->group(function () {
+        Route::get('create', [\App\Http\Controllers\AdminController::class,'adminCreate'])->name('pokaz.adminCreate');
+        Route::post('store',  [\App\Http\Controllers\AdminController::class,'adminStore'])->name('pokaz.adminStore');
+    });
+    // Counter
+    Route::prefix('counter')->group(function () {
+        Route::get('create', [\App\Http\Controllers\CounterController::class,'create'])->name('counter.create');
+        Route::post('store',  [\App\Http\Controllers\CounterController::class,'store'])->name('counter.store');
+    });
+    // Email
+    Route::prefix('email')->group(function () {
+        Route::get('/create', [\App\Http\Controllers\EmailController::class, 'create'])->name('email.create');
+        Route::post('/store', [\App\Http\Controllers\EmailController::class, 'store'])->name('email.store');
+    });
+    // Flat
+    Route::prefix('flat')->group(function () {
+        Route::get('/create',[\App\Http\Controllers\FlatController::class,'create'])->name('flat.create');
+        Route::post('/store',[\App\Http\Controllers\FlatController::class,'store'])->name('flat.store');
+    });
+    // Tarif
+    Route::prefix('tarif')->group(function () {
+        Route::get('/create',[\App\Http\Controllers\TarifController::class,'create'])->name('tarif.create');
+        Route::post('/store',[\App\Http\Controllers\TarifController::class,'store'])->name('tarif.store');
+        Route::get('/edit',[\App\Http\Controllers\TarifController::class,'edit'])->name('tarif.edit');
+        Route::post('/update',[\App\Http\Controllers\TarifController::class,'update'])->name('tarif.update');
+    });
+
+});
 
 require __DIR__.'/auth.php';

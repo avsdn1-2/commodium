@@ -8,15 +8,16 @@
     @endif
     <!--  -->
     @if ($day >= $start_pokaz_period || $day <= $end_pokaz_period)
-        @if ($day >= $start_pokaz_period)
-
             <div style="width:300px;margin:50px auto 0 auto">Введите показания на {{ $start_pokaz_period }}.{{ $rep_month }}.{{ $rep_year }}</div>
+        <!--@if ($day >= $start_pokaz_period)-->
 
-        @else
+        <!--    <div style="width:300px;margin:50px auto 0 auto">Введите показания на {{ $start_pokaz_period }}.{{ $rep_month }}.{{ $rep_year }}</div>-->
 
-            <div style="width:300px;margin:0 auto">Введите показания на {{ $start_pokaz_period }}.{{ $rep_month_prev }}.{{ $rep_year_prev }}</div>
+        <!--@else-->
 
-        @endif
+        <!--    <div style="width:300px;margin:0 auto">Введите показания на {{ $start_pokaz_period }}.{{ $rep_month_prev }}.{{ $rep_year_prev }}</div>-->
+
+        <!--@endif-->
         <form method="POST" style="width:300px;margin:0 auto" action="{{ route('pokaz.store') }}">
         @csrf
             <div style="width:300px">

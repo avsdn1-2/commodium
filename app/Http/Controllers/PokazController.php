@@ -15,10 +15,12 @@ use Illuminate\Support\Facades\Cache;
 class PokazController extends Controller
 {
     private $helpService;
+    //private $middleware;
 
     public function __construct(HelpService $helpService)
     {
         $this->helpService = $helpService;
+        $this->middleware('auth');
     }
     /**
      * Display a listing of the resource.
@@ -37,6 +39,9 @@ class PokazController extends Controller
      */
     public function create()
     {
+
+
+
         $user = auth()->user();
         $result = Pokaz::getRepPeriod();
 
@@ -97,12 +102,14 @@ class PokazController extends Controller
         ]);
         $user = auth()->user();
         $result = Pokaz::getRepPeriod();
+        //dd($result);
         $day = $result['day'];
         $rep_month = $result['rep_month'];
         $rep_year = $result['rep_year'];
         $rep_month_prev = $result['rep_month_prev'];
         $rep_year_prev = $result['rep_year_prev'];
 
+        $error_message = "";
         //если введены предыдущие показания, то сохраняем их
         if ($request->get('water_prev') > 0 && $request->get('warm_prev') > 0){
             $pokaz_prev = new Pokaz();
@@ -124,185 +131,61 @@ class PokazController extends Controller
 
         //если нет введенных показаний за отчетный период, то сохраняем их
         if ($pokaz == null){
-            $pokaz = new Pokaz();
-            $pokaz->flat = $user->flat;
-            $pokaz->year = $rep_year;
-            $pokaz->month = $rep_month;
-            $pokaz->water = $request->get('water');
-            $pokaz->warm = $request->get('warm');
-            $pokaz->save();
-            //$this->helpService->setPreviousRoute();
+
+            //проверяем, есть ли показания за предыдущий период
+            $pokaz_prev = Pokaz::where('flat',$user->flat)->where('year',$rep_year_prev)->where('month',$rep_month_prev)->get()->first();
+            if ($pokaz_prev->water <= $request->get('water') && $pokaz_prev->warm <= $request->get('warm')){
+
+                $pokaz = new Pokaz();
+                $pokaz->flat = $user->flat;
+                $pokaz->year = $rep_year;
+                $pokaz->month = $rep_month;
+                $pokaz->water = $request->get('water');
+                $pokaz->warm = $request->get('warm');
+                $pokaz->save();
+            } else {
+                $error_message = "Вы вводите меньшие показания чем за предыдущий период!";
+            }
         } else { //если есть введенные показания за отчетный период, то сохраняем, если введены большие показания; если введены меньшие, то показываем ошибку
             if ($request->get('water') >= $pokaz->water && $request->get('warm') >= $pokaz->warm){
                 $pokaz->water = $request->get('water');
                 $pokaz->warm = $request->get('warm');
                 $pokaz->save();
-                //$this->helpService->setPreviousRoute();
-
-
-
             } else {
                 $error_message = "Вы вводите меньшие показания по сравнению с введенными ранее!";
-                return view('pokaz.create', [
-                    'error_message' => $error_message,
-                    'rep_year' => $rep_year,
-                    'rep_month' => $rep_month,
-                    'day' => $day,
-                    'start_pokaz_period' => Pokaz::START_POKAZ_PERIOD,
-                    'end_pokaz_period' => Pokaz::END_POKAZ_PERIOD,
-                    'warm' => $pokaz->warm,
-                    'water' => $pokaz->water,
-                   // 'warm_prev' => $warm_prev,
-                   // 'water_prev' => $water_prev,
-                ]);
             }
         }
-
-        return redirect(route('pokaz.list', ['flat' => Auth::user()->flat]));
-    }
-    /*
-    public function store(Request $request)
-    {
-        $this->validate($request, [
-            'water' => 'required|integer',
-            'warm' => 'nullable|integer',
-            'water_prev' => 'integer',
-            'warm_prev' => 'integer'
-        ]);
-        $user = auth()->user();
-        $result = Pokaz::getRepPeriod();
-        $day = $result['day'];
-        $rep_month = $result['rep_month'];
-        $rep_year = $result['rep_year'];
-        $rep_month_prev = $result['rep_month_prev'];
-        $rep_year_prev = $result['rep_year_prev'];
-
-        //если введены предыдущие показания, то сохраняем их
-        if ($request->get('water_prev') > 0 && $request->get('warm_prev') > 0){
-            $pokaz_prev = new Pokaz();
-            $pokaz_prev->flat = $user->flat;
-            $pokaz_prev->year = $rep_year_prev;
-            $pokaz_prev->month = $rep_month_prev;
-            $pokaz_prev->water = $request->get('water_prev');
-            $pokaz_prev->warm = $request->get('warm_prev');
-            $pokaz_prev->save();
-            $water_prev = $request->get('water_prev');
-            $warm_prev = $request->get('warm_prev');
+        if ($error_message == "") {
+            return redirect(route('pokaz.list', ['flat' => Auth::user()->flat]));
         } else {
-            //$water_prev = 0;
-            //$warm_prev = 0;
+            return view('pokaz.create', [
+                'error_message' => $error_message,
+                'rep_year' => $rep_year,
+                'rep_month' => $rep_month,
+                'day' => $day,
+                'start_pokaz_period' => Pokaz::START_POKAZ_PERIOD,
+                'end_pokaz_period' => Pokaz::END_POKAZ_PERIOD,
+                'warm' => $request->get('warm'),
+                'water' => $request->get('water'),
+            ]);
         }
 
-        //проверяем, есть ли введенные показания за отчетный период
-        $pokaz = Pokaz::where('flat',$user->flat)->where('year',$rep_year)->where('month',$rep_month)->get()->first();
-
-        //если нет введенных показаний за отчетный период, то сохраняем их
-        if ($pokaz == null){
-            $pokaz = new Pokaz();
-            $pokaz->flat = $user->flat;
-            $pokaz->year = $rep_year;
-            $pokaz->month = $rep_month;
-            $pokaz->water = $request->get('water');
-            $pokaz->warm = $request->get('warm');
-            $pokaz->save();
-        } else { //если есть введенные показания за отчетный период, то сохраняем, если введены большие показания; если введены меньшие, то показываем ошибку
-            if ($request->get('water') >= $pokaz->water && $request->get('warm') >= $pokaz->warm){
-                $pokaz->water = $request->get('water');
-                $pokaz->warm = $request->get('warm');
-                $pokaz->save();
-            } else {
-                $error_message = "Вы вводите меньшие показания по сравнению с введенными ранее!";
-                return view('pokaz.create', [
-                    'error_message' => $error_message,
-                    'rep_year' => $rep_year,
-                    'rep_month' => $rep_month,
-                    'day' => $day,
-                    'start_pokaz_period' => Pokaz::START_POKAZ_PERIOD,
-                    'end_pokaz_period' => Pokaz::END_POKAZ_PERIOD,
-                    'warm' => $pokaz->warm,
-                    'water' => $pokaz->water,
-                    // 'warm_prev' => $warm_prev,
-                    // 'water_prev' => $water_prev,
-                ]);
-            }
-        }
-
-        return redirect(route('pokaz.list', ['flat' => Auth::user()->flat]));
     }
-    */
 
-    public function adminCreate()
+
+    public function list()
     {
         $result = Pokaz::getRepPeriodAdmin();
-
-        return view('pokaz.adminCreate', [
-            'rep_month' => $result['rep_month'],
-            'rep_year' => $result['rep_year'],
-        ]);
-    }
-
-    public function adminStore(Request $request)
-    {
-        $rules = [
-            'flat' => 'required|string|max:3|regex:#^[0-9А-Яа-я]+$#',
-            'year' => 'required|integer',
-            'month' => 'required|integer',
-            'water' => 'required|integer',
-            'warm' => 'nullable|integer'
-        ];
-        try {
-            $validatedData = $request->validate($rules);
-        } catch (\ValidationException $exception) {
-            return back()->withErrors(['msg' => $exception->getMessage()])->withInput();
-        }
-
-        $pokaz = Pokaz::where('flat',$request->get('flat'))->where('year',$request->get('year'))->where('month',$request->get('month'))->get()->first();
-        if ($pokaz == null){
-            $pokaz = new Pokaz();
-            $pokaz->flat = $request->get('flat');
-            $pokaz->year = $request->get('year');
-            $pokaz->month = $request->get('month');
-            $pokaz->water = $request->get('water');
-            $pokaz->warm = $request->get('warm');
-            $error_save = !$pokaz->save();
-            $error_message = '';
-            //dd($error_save);
-        } else {
-            $error_message = 'Показания для этой квартиры за указанный период уже переданы!';
-            $error_save = false;
-        }
-
-
-        return view('pokaz.adminCreate', [
-            'error_message' => $error_message,
-            'error_save' => $error_save,
-            'flat' => $request->get('flat'),
-            'rep_month' => $request->get('month'),
-            'rep_year' => $request->get('year'),
-        ]);
-    }
-
-    public function list($flat)
-    {
-        $pokazs = Pokaz::where('flat',$flat)->orderBy('id','desc')->get();
 
         return view('pokaz.list', [
-             'pokazs' => $pokazs,
-        ]);
-    }
-
-    public function listAll()
-    {
-        $result = Pokaz::getRepPeriodAdmin();
-
-        return view('pokaz.listAll', [
           //  'pokazs' => $pokazs,
             'rep_month' => $result['rep_month'],
             'rep_year' => $result['rep_year'],
+            'volume' => '',
         ]);
     }
 
-    public function listAllProc(Request $request)
+    public function info(Request $request)
     {
         $rules = [
             'year' => 'required|integer',
@@ -318,8 +201,9 @@ class PokazController extends Controller
         $result = Pokaz::getRepPeriodAdmin();
 
         $data = Pokaz::getData($request->get('volume'),$request->get('year'),$request->get('month'));
+        //dd($data);
 
-        return view('pokaz.listAll', [
+        return view('pokaz.list', [
             'pokazs' => $data['pokazs'],
             'prev' => $data['prev'],
             'total' => $data['total'],
@@ -327,6 +211,7 @@ class PokazController extends Controller
             'counter_prev' => $data['counter_prev'],
             'rep_month' => $result['rep_month'],
             'rep_year' => $result['rep_year'],
+            'volume' => $request->get('volume'),
         ]);
     }
 

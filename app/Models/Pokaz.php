@@ -11,7 +11,7 @@ class Pokaz extends Model
 {
     use HasFactory;
     const START_POKAZ_PERIOD = 24;
-    const END_POKAZ_PERIOD = 2;
+    const END_POKAZ_PERIOD = 8;
     const WARM_MULTIPLIER = 1.1;
     const REFRESH_TIME = 1800;
 
@@ -148,11 +148,12 @@ class Pokaz extends Model
         {
             $total += $pokaz->warm - $prev[$pokaz->flat];
         }
+        $counter = Counter::where('year',$year)->where('month',$month)->first();
         return [
             'pokazs' => $pokazs,
             'prev' => $prev,
             'total' => $total,
-            'counter' => Counter::where('year',$year)->where('month',$month)->first()->warm,
+            'counter' => is_null($counter)? null: $counter->warm,
             'counter_prev' => Counter::where('year',self::getPrevMonthYear($year,$month)['year'])->where('month',self::getPrevMonthYear($year,$month)['month'])->first()->warm,
 
         ];

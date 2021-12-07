@@ -27,7 +27,10 @@ class FlatController extends Controller
      */
     public function create()
     {
-        return view('flat.create');
+        if (!Auth::user()->is_admin ) {
+            abort(403,'Доступ запрещен!');
+        }
+        return view('admin.flat.create');
     }
 
     /**
@@ -38,6 +41,9 @@ class FlatController extends Controller
      */
     public function store(Request $request)
     {
+        if (!Auth::user()->is_admin ) {
+            abort(403,'Доступ запрещен!');
+        }
         $rules = [
             'number' => 'required|string|unique:flats',
             'square' => 'required|numeric',
@@ -60,7 +66,7 @@ class FlatController extends Controller
         $flat->square = $request->get('square');
         $flat->warmCounter = empty($request->get('warmCounter'))? false: true;
         $flat->useLift = empty($request->get('useLift'))? false: true;
-        $flat->privilege = $request->get('privilege');
+        $flat->privilege = empty($request->get('privilege'))? 0: $request->get('privilege');
         $flat->name = $request->get('name');
         $flat->first_name = $request->get('first_name');
         $flat->mid_name = $request->get('mid_name');
@@ -68,7 +74,8 @@ class FlatController extends Controller
         $flat->save();
         $flat->user()->associate(Auth::user());
 
-        return redirect(route('home'));
+        //return redirect(route('home'));
+        return view('admin.flat.update');
     }
 
     /**

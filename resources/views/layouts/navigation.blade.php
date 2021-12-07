@@ -51,7 +51,7 @@
 
                     @auth
                         <div class="" style="width:420px;position:relative;top:4px;float:left;text-align:center;/*border:1px solid red*/">
-                            <a href="/listAll" :active="request()->routeIs('pokaz.listAll')" class="height-30 underline">
+                            <a href="/list" :active="request()->routeIs('pokaz.list')" class="height-30 underline">
                                 {{ __('История показаний') }}
                             </a>
 
@@ -64,7 +64,11 @@
                             </a>
                         </div>
                         <div class="" style="width:350px;position:relative;top:4px;float:left;text-align:center;/*border:1px solid red*/">
-                            @if (Auth::user()->role == 'superadmin')
+                            @if (Auth::user()->is_manager || Auth::user()->is_admin)
+                                <a id="admin" href="/admin-panel" :active="request()->routeIs('admin-panel/')" class="height-30 underline">
+                                    {{ __('Админ-панель') }}
+                                </a>
+                            <!--
                                 <a id="tarif" href="/editTarif" :active="request()->routeIs('tarif.edit')" class="height-30 underline">
                                     {{ __('Тарифы') }}
                                 </a>
@@ -74,6 +78,7 @@
                                 <a id="flat" href="/createFlat" :active="request()->routeIs('flat.create')" class="height-30 underline" style="margin:0 0 0 30px;">
                                     {{ __('Квартиры') }}
                                 </a>
+                                -->
                                 <div style="clear:both"></div>
                             @endif
                             @if (in_array(Auth::user()->role,['admin','superadmin']))
