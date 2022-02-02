@@ -10,6 +10,7 @@ use Illuminate\Contracts\Validation\ValidationException;
 
 class FlatController extends Controller
 {
+
     /**
      * Display a listing of the resource.
      *
@@ -44,9 +45,11 @@ class FlatController extends Controller
         if (!Auth::user()->is_admin ) {
             abort(403,'Доступ запрещен!');
         }
+        $allowedFlatsList = implode(',',Flat::allowedFlats);
         $rules = [
-            'number' => 'required|string|unique:flats',
+            'number' => "required|string|unique:flats|in:$allowedFlatsList",
             'square' => 'required|numeric',
+            'residents' => 'required|integer',
             'privilege' => 'nullable|numeric',
             'name' => 'required|string',
             'first_name' => 'required|string',
@@ -64,8 +67,9 @@ class FlatController extends Controller
         $flat = new Flat();
         $flat->number = $request->get('number');
         $flat->square = $request->get('square');
-        $flat->warmCounter = empty($request->get('warmCounter'))? false: true;
-        $flat->useLift = empty($request->get('useLift'))? false: true;
+        $flat->residents = $request->get('residents');
+        $flat->warmCounter = !empty($request->get('warmCounter'));
+        $flat->useLift = !empty($request->get('useLift'));
         $flat->privilege = empty($request->get('privilege'))? 0: $request->get('privilege');
         $flat->name = $request->get('name');
         $flat->first_name = $request->get('first_name');

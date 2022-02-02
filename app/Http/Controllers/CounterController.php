@@ -35,7 +35,7 @@ class CounterController extends Controller
      */
     public function create()
     {
-        if (!Auth::user()->is_manager || !Auth::user()->is_admin ) {
+        if (!Auth::user()->is_manager && !Auth::user()->is_admin ) {
             abort(403,'Доступ запрещен!');
         }
         $result = Pokaz::getRepPeriodAdmin();

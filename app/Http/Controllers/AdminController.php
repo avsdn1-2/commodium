@@ -2,13 +2,27 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Counter;
+use App\Models\Flat;
+use App\Models\Pull;
+use App\Models\Tarif;
+use App\Models\User;
+use App\Services\CalcService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Pokaz;
+use Illuminate\Support\Facades\Cache;
 
 class AdminController extends Controller
 {
+    private $calcService;
+
+    public function __construct(CalcService $calcService)
+    {
+        $this->calcService = $calcService;
+    }
+
     public function index()
     {
         return view('admin.index');
@@ -16,10 +30,13 @@ class AdminController extends Controller
 
     public function adminCreate()
     {
-        if (!Auth::user()->is_manager || !Auth::user()->is_admin ) {
+        if (!Auth::user()->is_manager && !Auth::user()->is_admin ) {
             abort(403,'Доступ запрещен!');
         }
         $result = Pokaz::getRepPeriodAdmin();
+
+        //$user = User::factory()->create();
+        //dd($user);
 
         return view('admin.pokaz.create', [
             'rep_month' => $result['rep_month'],
@@ -85,6 +102,93 @@ class AdminController extends Controller
             'flat' => $request->get('flat'),
             'rep_month' => $request->get('month'),
             'rep_year' => $request->get('year'),
+        ]);
+    }
+
+    //формирование квитанции менеджером за квартиру
+    public function adminCalcCreate()
+    {
+
+       // $result = $this->calcService->pull();
+
+        return view('admin.calc.create', [
+        ]);
+    }
+    public function adminCalc(Request $request)
+    {
+        $allowedFlatsList = implode(',',Flat::allowedFlats);
+        $rules = [
+            'flat' => "required|in:$allowedFlatsList",
+        ];
+        try {
+            $validatedData = $request->validate($rules);
+        } catch (\ValidationException $exception) {
+            return back()->withErrors(['msg' => $exception->getMessage()])->withInput();
+        }
+
+        if (in_array($request->input('flat'),Flat::admin_flats)){
+            echo 'Ошибка! Нельзя формировать квитанцию по этой квартире!';
+            exit();
+        }
+
+        $periodParams = Pokaz::getRepPeriodAdmin();
+        //dd($periodParams);
+
+        //$period = Pokaz::getRepPeriod();
+        //dd($period);
+
+        $flat = Flat::where('number',$request->input('flat'))->first();
+        if ($flat == null){
+            echo "Ошибка! Не найдена квартира пользователя!";
+            exit();
+        }
+
+        $pokaz = Pokaz::where('flat',$flat->number)->where('year',$periodParams['rep_year'])->where('month',$periodParams['rep_month'])->first();
+        if ($pokaz == null){
+            echo "Ошибка! Не занесены показания за текущий период!";
+            exit();
+        }
+        $pokaz_prev = Pokaz::where('flat',$flat->number)->where('year',$periodParams['rep_year_prev'])->where('month',$periodParams['rep_month_prev'])->first();
+        if ($pokaz_prev == null){
+            echo "Ошибка! Не занесены показания за предыдущий период!";
+            exit();
+        }
+        $tarif = Tarif::find(1);
+        if ($tarif == null){
+            echo "Ошибка! Не найдены тарифы!";
+            exit();
+        }
+
+
+        $payment = Pokaz::getPayment($pokaz,$pokaz_prev,$tarif,$flat,$periodParams);
+
+
+        $html = Pokaz::formatInvoice($payment);
+
+        //сохраняем в кеш подготовленную html-строку для последующего скачивания в pdf
+        Cache::put('generate_' . $flat->number, $html, Pokaz::REFRESH_TIME);
+        /*
+        return view('pokaz.calc', [
+            'payment' => $payment,
+        ]);
+        */
+
+        return view('admin.calc.calc', [
+            'payment' => $payment,
+        ]);
+    }
+
+
+    public function adminWarm()
+    {
+        //если по всем квартирам занесены показания и занесены текущие показания общедомового счетчика тепла
+        $result = $this->calcService->pull();
+
+        return view('admin.calc.warm', [
+            'flatsWithoutPokaz_str' => count($result['flatsWithoutPokaz']) > 0? implode(',',$result['flatsWithoutPokaz']): '',
+            'counter' => $result['counter'],
+            'rep_month' => Pokaz::getMonthName($result['rep_month']),
+            'rep_year' => $result['rep_year'],
         ]);
     }
 }

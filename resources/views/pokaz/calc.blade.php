@@ -56,7 +56,7 @@
     </div>
 
     @if ($payment['warm'] !== 0)
-        <div style="width:120px;font-weight:bold;margin:0 auto">ОПАЛЕННЯ</div>
+    <!--<div style="width:120px;font-weight:bold;margin:0 auto">ОПАЛЕННЯ</div>
         <div style="width:800px;margin:0 auto">
             <table class="table table-striped">
                 <thead>
@@ -83,6 +83,7 @@
                 </tbody>
             </table>
         </div>
+    -->
     @endif
 
     <div class="text-center pdf-btn">

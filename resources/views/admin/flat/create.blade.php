@@ -22,6 +22,10 @@
 
                 <x-input id="square" class="block mt-1 w-full" type="text" name="square" :value="old('square')" required />
 
+                <x-label for="residents" :value="__('Количество жильцов')" />
+
+                <x-input id="residents" class="block mt-1 w-full" type="text" name="residents" :value="old('residents')" required />
+
                 <div class="form-check" style="margin:20px 0 20px 0">
                     <input class="form-check-input" type="checkbox" value="warmCounter" name="warmCounter" id="flexCheckWarmCounter"/>
                     <label class="form-check-label" for="flexCheckWarmCounter">Установлен счетчик тепла</label>

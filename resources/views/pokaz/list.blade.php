@@ -9,7 +9,7 @@
     <div class="py-12">
 
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div>История показаний</div>
+            <h3>История показаний</h3>
             <form method="POST" style="width:700px;margin:0 auto" action="{{ route('pokaz.info') }}">
                 @csrf
                 <x-label for="year" :value="__('Год')" style="width:60px;float:left" />
@@ -64,10 +64,10 @@
                         <tr>
                           <!--  <th scope="col" style="width:70px;text-align:center"></th>
                             <th scope="col" style="width:180px;text-align:center"></th> -->
-                            <th scope="col" style="width:180px;text-align:center">*</th>
-                            <th scope="col" style="width:100px;text-align:center">Потребление тепла по <br>общему счетчику за месяц</th>
-                            <th scope="col" style="width:60px;text-align:center">Общий счетчик<br>тек / пред</th>
-                            <th scope="col" style="width:100px;text-align:center">Общее потребление тепла всеми квартирами за месяц</th>
+                            <th scope="col" style="width:180px;text-align:center">Месячный небаланс, кВт</th>
+                            <th scope="col" style="width:100px;text-align:center">Потребление тепла по <br>общему счетчику за месяц, кВт</th>
+                            <th scope="col" style="width:60px;text-align:center">Общий счетчик, кВт<br>тек / пред</th>
+                            <th scope="col" style="width:100px;text-align:center">Общее потребление тепла всеми квартирами за месяц, кВт</th>
                         </tr>
                         </thead>
 
@@ -75,10 +75,10 @@
                         <tr>
                         <!--    <td style="text-align:center"></td>
                             <td style="text-align:center"></td> -->
-                            <td style="text-align:center">*</td>
-                            <td style="text-align:center">{{ $counter - $counter_prev }}</td>
-                            <td style="text-align:center">{{ $counter }}  /  {{ $counter_prev }}</td>
-                            <td style="text-align:center">{{ $total }}</td>
+                            <td style="text-align:center">{{ number_format($counter - $counter_prev - $total,0,'.',' ') }}</td>
+                            <td style="text-align:center">{{ number_format($counter - $counter_prev,0,'.',' ') }}</td>
+                            <td style="text-align:center">{{ number_format($counter,0,'.',' ') }}  /  {{ number_format($counter_prev,0,'.',' ') }}</td>
+                            <td style="text-align:center">{{ number_format($total,0,'.',' ') }}</td>
                         </tr>
 
                         </tbody>
@@ -96,9 +96,9 @@
                          <!--   <th scope="col" style="width:70px;text-align:center">Год</th>
                             <th scope="col" style="width:180px;text-align:center">Месяц</th> -->
                             <th scope="col" style="width:180px;text-align:center">Квартира</th>
-                            <th scope="col" style="width:60px;text-align:center">Вода</th>
-                            <th scope="col" style="width:100px;text-align:center">Тепло<br>тек / пред</th>
-                            <th scope="col" style="width:100px;text-align:center">Потребление тепла за месяц</th>
+                            <th scope="col" style="width:60px;text-align:center">Вода, куб.м</th>
+                            <th scope="col" style="width:100px;text-align:center">Тепло, кВт<br>тек / пред</th>
+                            <th scope="col" style="width:100px;text-align:center">Потребление тепла за месяц, кВт</th>
                         </tr>
                         </thead>
 
@@ -107,10 +107,10 @@
                             <tr>
                             <!--    <td style="text-align:center">{{ $pokaz->year }}</td>
                                 <td style="text-align:center">{{ $pokaz->month }} </td> -->
-                                <td style="text-align:center">{{ $pokaz->flat }} </td>
-                                <td style="text-align:center">{{ $pokaz->water }}</td>
-                                <td style="text-align:center">{{ $pokaz->warm }}  /  {{ $prev[$pokaz->flat] }}</td>
-                                <td style="text-align:center">{{ $pokaz->warm - $prev[$pokaz->flat] }}</td>
+                                <td style="text-align:center">{{ number_format($pokaz->flat,0,'.',' ') }} </td>
+                                <td style="text-align:center">{{ number_format($pokaz->water,0,'.',' ') }}</td>
+                                <td style="text-align:center">{{ number_format($pokaz->warm,0,'.',' ') }}  /  {{ number_format($prev[$pokaz->flat],0,'.',' ') }}</td>
+                                <td style="text-align:center">{{ number_format($pokaz->warm - $prev[$pokaz->flat],0,'.',' ') }}</td>
                             </tr>
                         @endforeach
                         </tbody>

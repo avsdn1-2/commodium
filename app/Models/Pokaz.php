@@ -11,17 +11,20 @@ class Pokaz extends Model
 {
     use HasFactory;
     const START_POKAZ_PERIOD = 24;
-    const END_POKAZ_PERIOD = 8;
+    const END_POKAZ_PERIOD = 16;
     const WARM_MULTIPLIER = 1.1;
     const REFRESH_TIME = 1800;
+    const admin_email = 'avsdn1@gmail.com';
+    const kVtToGkal = 1163.06;
+
 
     protected $fillable = [
         'water',
         'warm'
     ];
-    public function user()
+    public function flat()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Flat::class);
     }
 
     public static function getRepPeriod(){
@@ -73,11 +76,6 @@ class Pokaz extends Model
         $result['rep_month_prev'] = (int)$res_prev['rep_month'];
         $result['rep_year_prev'] = (int) $res_prev['rep_year'];
 
-
-
-
-        //    'month_prev_m' => $month_prev_m,
-       //     'day_prev' => $day_prev
         return $result;
     }
 
@@ -85,6 +83,7 @@ class Pokaz extends Model
     {
         $year = (int)date('Y',time());
         $month = (int)date('n',time());
+        $month_m = (int)date('m',time());
         $day = (int)date('j',time());
 
         $date = date('Y-m-d',time());
@@ -92,13 +91,17 @@ class Pokaz extends Model
 
         if ($day >= self::START_POKAZ_PERIOD){
             $rep_month = $month;
+            $rep_month_m = $month_m;
             $rep_year = $year;
         } else {
             $rep_month = (int)date('n',strtotime($date_prev));
+            $rep_month_m = (int)date('m',strtotime($date_prev));
             $rep_year = (int)date('Y',strtotime($date_prev));
         }
         return [
+            'day' => $day,
             'rep_month' => $rep_month,
+            'rep_month_m' => $rep_month_m,
             'rep_year' => $rep_year,
             'rep_month_prev' => self::getPrevMonthYear($rep_year,$rep_month)['month'],
             'rep_year_prev' => self::getPrevMonthYear($rep_year,$rep_month)['year']
@@ -137,8 +140,17 @@ class Pokaz extends Model
             $pokazs = Pokaz::where('year',$year)->where('month',$month)->where('flat',Auth::user()->flat)->get();
             $pokazs_prev = Pokaz::where('year',self::getPrevMonthYear($year,$month)['year'])->where('month',self::getPrevMonthYear($year,$month)['month'])->where('flat',Auth::user()->flat)->get();
         }
+        if ($pokazs == null){
+            echo 'Ошибка! Не найдены показания за текущий период!';
+            exit();
+        }
+        if ($pokazs_prev == null){
+            echo 'Ошибка! Не найдены показания за предыдущий период!';
+            exit();
+        }
 
         $prev = [];
+
         foreach ($pokazs_prev as $pokaz)
         {
             $prev[$pokaz->flat] = $pokaz->warm;
@@ -148,13 +160,21 @@ class Pokaz extends Model
         {
             $total += $pokaz->warm - $prev[$pokaz->flat];
         }
+
         $counter = Counter::where('year',$year)->where('month',$month)->first();
+        $counter_prev = Counter::where('year',self::getPrevMonthYear($year,$month)['year'])->where('month',self::getPrevMonthYear($year,$month)['month'])->first();
+        /*
+        if ($counter == null){
+            echo 'Ошибка! Не найдены показания общедомового счетчика за текущий период!';
+            exit();
+        }
+        */
         return [
             'pokazs' => $pokazs,
             'prev' => $prev,
             'total' => $total,
             'counter' => is_null($counter)? null: $counter->warm,
-            'counter_prev' => Counter::where('year',self::getPrevMonthYear($year,$month)['year'])->where('month',self::getPrevMonthYear($year,$month)['month'])->first()->warm,
+            'counter_prev' => is_null($counter_prev)? null: $counter_prev->warm,
 
         ];
     }
@@ -162,6 +182,12 @@ class Pokaz extends Model
 
     public static function getPayment($pokaz,$pokaz_prev,$tarif,$flat,$periodParams)
     {
+        $flats = Flat::all();
+        $residents_all = 0;
+        foreach ($flats as $one){
+            $residents_all += $one->residents;
+        }
+
         $payment = [
             'day' => $periodParams['day'],
             'month' => $periodParams['rep_month'],
@@ -175,12 +201,12 @@ class Pokaz extends Model
             'warmCounter' => $flat->warmCounter,
             'year' => $periodParams['rep_year'],
             'water' => ($pokaz->water - $pokaz_prev->water) * $tarif->water,
-            'warm' => $flat->warmCounter == true? ($pokaz->warm !== null? number_format(round(($pokaz->warm - $pokaz_prev->warm) / 1163.06 * $tarif->warm * self::WARM_MULTIPLIER,2),2,'.',' '): 0 ) : 3000,
+            'warm' => $flat->warmCounter == true? ($pokaz->warm !== null? number_format(round(($pokaz->warm - $pokaz_prev->warm) / self::kVtToGkal * $tarif->warm * self::WARM_MULTIPLIER,2),2,'.',' '): 0 ) : 3000,
             'warm_current' => number_format($pokaz->warm,0,'.',' '),
             'warm_previous' => number_format($pokaz_prev->warm,0,'.',' '),
             'service' => round($flat->square * $tarif->service,0),
-            'lift' => $tarif->lift,
-            'rubbish' => $tarif->rubbish,
+            'lift' => round($tarif->lift * ($flat->residents / $residents_all),2),
+            'rubbish' => round($tarif->rubbish * ($flat->residents / $residents_all),2),
             'parkingCleaning' => $tarif->parkingCleaning,
             'parkingLightening' => $tarif->parkingLightening,
             'cons' => $tarif->cons
@@ -304,7 +330,7 @@ class Pokaz extends Model
             </tbody>
         </table>
         </div>';
-
+        /*
         if ($payment['warm'] !== 0) {
             $html .=
                '<div style="width:120px;font-weight:bold;margin:0 auto">ОПАЛЕННЯ</div>
@@ -335,7 +361,7 @@ class Pokaz extends Model
                     </table>
                 </div>';
             }
-
+        */
         $html .= '</div></body></head></html>';
 
         return $html;

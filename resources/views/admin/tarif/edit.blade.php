@@ -41,11 +41,11 @@
 
                 <x-input id="service" class="block mt-1 w-full" type="text" name="service" :value="isset($tarif->service)? $tarif->service: 0" />
 
-                <x-label for="lift" :value="__('Тариф за обслуживание лифта')" />
+                <x-label for="lift" :value="__('Общая месячная сумма за обслуживание лифта')" />
 
                 <x-input id="lift" class="block mt-1 w-full" type="text" name="lift" :value="isset($tarif->lift)? $tarif->lift: 0" />
 
-                <x-label for="rubbish" :value="__('Тариф за вывоз мусора')" />
+                <x-label for="rubbish" :value="__('Общая месячная сумма за вывоз мусора')" />
 
                 <x-input id="rubbish" class="block mt-1 w-full" type="text" name="rubbish" :value="isset($tarif->rubbish)? $tarif->rubbish: 0" />
 

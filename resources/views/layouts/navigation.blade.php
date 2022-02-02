@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>Laravel</title>
+    <title>{{ config('app.name') }}</title>
 
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
@@ -44,7 +44,7 @@
 
 
                     <div class="" style="width:190px;float:left;/*border:1px solid red*/">
-                        <a href="route('home')" class="font-20 height-30 text-white align-items-center text-decoration-none">
+                        <a href="/" class="font-20 height-30 text-white align-items-center text-decoration-none">
                             {{ __('ОСМД Коммодиум') }}
                         </a>
                     </div>
@@ -63,51 +63,37 @@
                                 {{ __('Квитанции') }}
                             </a>
                         </div>
-                        <div class="" style="width:350px;position:relative;top:4px;float:left;text-align:center;/*border:1px solid red*/">
-                            @if (Auth::user()->is_manager || Auth::user()->is_admin)
-                                <a id="admin" href="/admin-panel" :active="request()->routeIs('admin-panel/')" class="height-30 underline">
-                                    {{ __('Админ-панель') }}
-                                </a>
-                            <!--
-                                <a id="tarif" href="/editTarif" :active="request()->routeIs('tarif.edit')" class="height-30 underline">
-                                    {{ __('Тарифы') }}
-                                </a>
-                                <a id="email" href="/createEmail" :active="request()->routeIs('email.create')" class="height-30 underline" style="margin:0 0 0 30px;">
-                                    {{ __('Емейлы') }}
-                                </a>
-                                <a id="flat" href="/createFlat" :active="request()->routeIs('flat.create')" class="height-30 underline" style="margin:0 0 0 30px;">
-                                    {{ __('Квартиры') }}
-                                </a>
-                                -->
-                                <div style="clear:both"></div>
-                            @endif
-                            @if (in_array(Auth::user()->role,['admin','superadmin']))
-                                 <a id="adminPokaz" href="/adminCreate" :active="request()->routeIs('pokaz.adminCreate')" class="height-30 underline" style="margin:0 0 0 30px;">
-                                    {{ __('Внести показания как Админ') }}
-                                 </a>
 
-                                <a id="counter" href="/createCounter" :active="request()->routeIs('counter.create')" class="height-30 underline" style="margin:0 0 0 30px;">
-                                    {{ __('Внести показания общедомового счетчика тепла') }}
-                                </a>
-
-                            @endif
-                        </div>
                     @endauth
-                    <div class="" style="width:150px;position:relative;top:4px;float:right">
-                    @auth
-                        <!--<div class="height-30" style="width:40%;float:left">{{ Auth::user()->name }}</div>-->
-                            <div style="width:100%;height:30px;text-align:center;/*border:1px solid yellow*/">
-                                <div id="nam" :class="{ slide_down: request()->routeIs('tarif.edit') }" style="width:45%;float:left;/*border:1px solid green;*/">
-                                    <nav-link style=""href="" class="height-30">{{ Auth::user()->name }}</nav-link>
+                    <div class="var_width" style="position:relative;top:4px;float:right;/*border:1px solid magenta;*/">
+
+
+
+
+                        @auth
+                            @if (Auth::user()->is_manager || Auth::user()->is_admin)
+                                <div class="" style="width:200px;position:relative;top:0px;float:left;text-align:center;/*border:1px solid red*/">
+                                    <a id="admin" href="/admin-panel" :active="request()->routeIs('admin-panel/')" class="height-30 underline">
+                                        {{ __('Админ-панель') }}
+                                    </a>
+                                </div>
+                            @endif
+
+
+
+
+                            <div style="width:200px;height:30px;text-align:center;float:right;/*border:1px solid yellow*/">
+                                <div id="nam" :class="{ slide_down: request()->routeIs('tarif.edit') }" style="width:50%;float:left;/*border:1px solid green;*/">
+                                    <nav-link style="" href="" class="height-30">{{ Auth::user()->name }}</nav-link>
                                 </div>
                                 @if (Route::has('logout'))
-                                    <div style="width:45%;float:right;/*border:1px solid magenta;*/">
-                                        <a href="/logout" class="height-30 underline">Logout</a>
+                                    <div style="width:50%;float:right;">
+                                        <a href="/logout" class="height-30 underline">Выход</a>
                                     </div>
                                 @endif
                             </div>
                         @else
-                            <div style="width:100%;text-align:center;/*border:1px solid yellow*/">
+                            <div style="width:200px;text-align:center;float:right;/*border:1px solid yellow*/">
                                 @if (Route::has('login'))
                                     <a href="/login" class="height-30 underline">Вход</a>
                                 @endif
@@ -138,7 +124,7 @@
     }
     .border-1
     {
-        border:1px solid green;
+        /*border:1px solid green;*/
     }
     .font-20
     {
@@ -154,25 +140,31 @@
 
         .flex_width {
             width: 80%;
-            border:1px solid green;
+            /*border:1px solid green;*/
             /*display: inline-block;*/
             /* vertical-align: middle;*/
         }
         .flex_height {
             height:70px;
         }
+        .var_width {
+            width:405px;
+        }
 
     }
-    @media all and (max-width: 480px) {
+    @media all and (max-width: 720px) {
 
         .flex_width {
             width: 100%;
-            border:1px solid green;
+            /*border:1px solid green;*/
             /*display: inline-block;*/
 
         }
         .flex_height {
             height:100px;
+        }
+        .var_width {
+            width:205px;
         }
 
     }

@@ -35,7 +35,7 @@ class User extends Authenticatable
 
     //установление аттрибута по умолчанию
     protected $attributes = [
-        'role' => 'user',
+      //  'flat' => '50',
     ];
 
     /**
@@ -47,8 +47,9 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
     ];
 
-    public function pokazs()
+    public function flat()
     {
-        return $this->hasMany(Pokaz::class);
+        return $this->hasOne(Flat::class,'flat','number');
     }
+
 }

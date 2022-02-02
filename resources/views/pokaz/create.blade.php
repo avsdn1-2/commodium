@@ -1,26 +1,20 @@
 <x-app-layout>
-    @if (isset($message))
-        <div style="width:300px;border:1px solid red;border-radius:5px;color:red;margin:0 auto"><p style="margin:0 0 0 10px">{{ $message }}</p></div>
-    @endif
 
-    @if (isset($error_message))
-        <div style="width:300px;border:1px solid red;border-radius:5px;color:red;margin:0 auto"><p style="margin:0 0 0 10px">{{ $error_message }}</p></div>
+
+    @if (isset($message) && $message !== '')
+        <div style="width:300px;border:1px solid green;background-color:green;text-align:center;border-radius:5px;color:white;margin:0 auto"><p style="margin:0 0 0 10px">{{ $message }}</p></div>
     @endif
     <!--  -->
     @if ($day >= $start_pokaz_period || $day <= $end_pokaz_period)
             <div style="width:300px;margin:50px auto 0 auto">Введите показания на {{ $start_pokaz_period }}.{{ $rep_month }}.{{ $rep_year }}</div>
-        <!--@if ($day >= $start_pokaz_period)-->
 
-        <!--    <div style="width:300px;margin:50px auto 0 auto">Введите показания на {{ $start_pokaz_period }}.{{ $rep_month }}.{{ $rep_year }}</div>-->
-
-        <!--@else-->
-
-        <!--    <div style="width:300px;margin:0 auto">Введите показания на {{ $start_pokaz_period }}.{{ $rep_month_prev }}.{{ $rep_year_prev }}</div>-->
-
-        <!--@endif-->
         <form method="POST" style="width:300px;margin:0 auto" action="{{ route('pokaz.store') }}">
-        @csrf
+            @csrf
             <div style="width:300px">
+                <x-auth-validation-errors class="mb-4" :errors="$errors" />
+                <div style="clear:both"></div>
+            <div>
+
                 <x-label for="water" :value="__('Вода: текущие показания')" />
                 <input id="water" class="block mt-1 w-full" style="border-radius:5px;" type="text" name="water"  value="{{ $water }}" required autofocus />
 

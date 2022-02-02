@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\Email;
+use App\Models\Flat;
+use App\Models\Pokaz;
+use App\Models\Pull;
 use App\Models\User;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Auth\Events\Registered;
@@ -13,9 +16,6 @@ use Illuminate\Support\Facades\Hash;
 
 class RegisteredUserController extends Controller
 {
-    protected $allowedFlats = ['admin','admin1','1','2','3','4','5','6','7','8','9','10','11','12','12а','14','15','16','17',
-        '18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','37',
-        '38','39','40','41','42','43','44','45','46','47','48','49','50','51','52','53','54'];
     /**
      * Display the registration view.
      *
@@ -50,19 +50,21 @@ class RegisteredUserController extends Controller
 
         //Проверка на допустимость емейла и квартиры
         $allowedEmails = Email::getAllowedEmails();
-        //var_dump($request->email);
-        //var_dump(in_array($request->email,$this->allowedFlats));
-        //exit();
-        if (in_array($request->email,$allowedEmails) && in_array($request->flat,$this->allowedFlats)){ //
+
+        if (in_array($request->email,$allowedEmails) && in_array($request->flat,Flat::allowedFlats)){ //
             Auth::login($user = User::create([
                 'name' => $request->name,
                 'flat' => $request->flat,
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
             ]));
+            //занесение квартиры в пулл для расчетов стоимости тепла
+            $result = Pull::where('flat',$request->flat)->get()->first();
+            if ($result == null && !in_array($request->flat,Pokaz::admin_flats)){
+                Pull::create(['flat' => $request->flat]);
+            }
 
             event(new Registered($user));
-
             //return redirect(RouteServiceProvider::HOME);
             return redirect('/');
         } else {
