@@ -39,12 +39,16 @@ Route::post('/info',[\App\Http\Controllers\PokazController::class,'info'])->name
 Route::get('/error',[\App\Http\Controllers\ErrorController::class,'index'])->name('error.index');
 Route::get('/info_m_pokaz',[\App\Http\Controllers\ErrorController::class,'info_m_pokaz'])->name('error.info_m_pokaz');
 Route::get('/info_m_kvit',[\App\Http\Controllers\ErrorController::class,'info_m_kvit'])->name('error.info_m_kvit');
+Route::get('/no_pokaz',[\App\Http\Controllers\ErrorController::class,'no_pokaz'])->name('error.no_pokaz');
+
 
 
 //создание pdf-документов
 Route::get('pdf/preview', [\App\Http\Controllers\GenerateController::class, 'preview'])->name('pdf.preview');
 Route::get('pdf/generate/{month}', [\App\Http\Controllers\GenerateController::class, 'generatePDF'])->name('pdf.generate'); //generatePDFmanager
 Route::get('pdf/generateManager/{flat}/{month}', [\App\Http\Controllers\GenerateController::class, 'generatePDFmanager'])->name('pdf.generateManager'); //generatePDFmanager
+Route::get('pdf/generateWarmManager/{flat}/{month}', [\App\Http\Controllers\GenerateController::class, 'generatePdfWarmManager'])->name('pdf.generateWarmManager');
+
 
 //тестовый роут для экспериментов
 Route::get('/test',[\App\Http\Controllers\TestController::class,'index'])->name('test.index');
@@ -55,6 +59,8 @@ Route::group(['prefix' => 'admin-panel'], function () {
     Route::get('/create', [\App\Http\Controllers\AdminController::class, 'adminCalcCreate'])->name('admin.create');
     Route::post('/calc', [\App\Http\Controllers\AdminController::class, 'adminCalc'])->name('admin.calc');
     Route::get('/warm', [\App\Http\Controllers\AdminController::class, 'adminWarm'])->name('admin.warm');
+    Route::get('/wcreate', [\App\Http\Controllers\AdminController::class, 'adminWcreate'])->name('admin.wcreate');
+    Route::post('/winvoice', [\App\Http\Controllers\AdminController::class, 'adminWinvoice'])->name('admin.winvoice');
 
     // Pokazs
     Route::prefix('pokazs')->group(function () {
@@ -73,8 +79,11 @@ Route::group(['prefix' => 'admin-panel'], function () {
     });
     // Flat
     Route::prefix('flat')->group(function () {
+        Route::get('/index',[\App\Http\Controllers\FlatController::class,'index'])->name('flat.index');
         Route::get('/create',[\App\Http\Controllers\FlatController::class,'create'])->name('flat.create');
         Route::post('/store',[\App\Http\Controllers\FlatController::class,'store'])->name('flat.store');
+        Route::get('/edit/{flat}',[\App\Http\Controllers\FlatController::class,'edit'])->name('flat.edit');
+        Route::put('/update/{flat}',[\App\Http\Controllers\FlatController::class,'update'])->name('flat.update');
     });
     // Tarif
     Route::prefix('tarif')->group(function () {
@@ -88,6 +97,15 @@ Route::group(['prefix' => 'admin-panel'], function () {
         Route::get('/create',[\App\Http\Controllers\PullController::class,'create'])->name('pull.create');
         Route::post('/store',[\App\Http\Controllers\PullController::class,'store'])->name('pull.store');
         Route::get('/delete',[\App\Http\Controllers\PullController::class,'delete'])->name('pull.delete');
+    });
+    //User
+    Route::prefix('user')->group(function () {
+        Route::get('/index',[\App\Http\Controllers\UserController::class,'index'])->name('user.index');
+        Route::get('/create',[\App\Http\Controllers\UserController::class,'create'])->name('user.create');
+        Route::post('/store',[\App\Http\Controllers\UserController::class,'store'])->name('user.store');
+        Route::get('/edit/{user}',[\App\Http\Controllers\UserController::class,'edit'])->name('user.edit');
+        Route::put('/update/{user}',[\App\Http\Controllers\UserController::class,'update'])->name('user.update');
+        Route::get('/delete/{user}',[\App\Http\Controllers\UserController::class,'delete'])->name('user.delete');
     });
 
 });

@@ -33,6 +33,10 @@
 
                 <x-input id="water" class="block mt-1 w-full" type="text" name="water" :value="isset($tarif->water)? $tarif->water: 0" required autofocus />
 
+                <x-label for="water_delivery" :value="__('Тариф за доставку воды')" />
+
+                <x-input id="water_delivery" class="block mt-1 w-full" type="text" name="water_delivery" :value="isset($tarif->water_delivery)? $tarif->water_delivery: 0" required autofocus />
+
                 <x-label for="warm" :value="__('Тариф за тепло')" />
 
                 <x-input id="warm" class="block mt-1 w-full" type="text" name="warm" :value="isset($tarif->warm)? $tarif->warm: 0" required />

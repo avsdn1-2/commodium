@@ -60,7 +60,7 @@
                             </a>
 
                             <a href="/calc" :active="request()->routeIs('pokaz.calc')" class="height-30 underline" style="margin-left:15px">
-                                {{ __('Квитанции') }}
+                                {{ __('Квитанция') }}
                             </a>
                         </div>
 

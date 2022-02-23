@@ -6,6 +6,7 @@ use App\Models\Counter;
 use App\Models\Flat;
 use App\Models\Pull;
 use App\Models\Tarif;
+use App\Models\Tarifw;
 use App\Models\User;
 use App\Services\CalcService;
 use Illuminate\Database\Eloquent\Model;
@@ -13,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Pokaz;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 
 class AdminController extends Controller
 {
@@ -25,6 +27,9 @@ class AdminController extends Controller
 
     public function index()
     {
+        if (!auth()->user()->is_admin && !auth()->user()->is_manager){
+            abort(403,'Доступ запрещен!');
+        }
         return view('admin.index');
     }
 
@@ -34,9 +39,6 @@ class AdminController extends Controller
             abort(403,'Доступ запрещен!');
         }
         $result = Pokaz::getRepPeriodAdmin();
-
-        //$user = User::factory()->create();
-        //dd($user);
 
         return view('admin.pokaz.create', [
             'rep_month' => $result['rep_month'],
@@ -49,12 +51,13 @@ class AdminController extends Controller
         if (!Auth::user()->is_manager || !Auth::user()->is_admin ) {
             abort(403,'Доступ запрещен!');
         }
+        $allowedFlatsList = implode(',',Flat::allowedFlats);
         $rules = [
-            'flat' => 'required|string|max:3|regex:#^[0-9А-Яа-я]+$#',
+            'flat' => "required|string|in:$allowedFlatsList",
             'year' => 'required|integer',
             'month' => 'required|integer',
             'water' => 'required|integer',
-            'warm' => 'nullable|integer'
+            'warm' => 'nullable|numeric'
         ];
         try {
             $validatedData = $request->validate($rules);
@@ -75,6 +78,7 @@ class AdminController extends Controller
                     $pokaz->month = $request->get('month');
                     $pokaz->water = $request->get('water');
                     $pokaz->warm = $request->get('warm');
+                    $pokaz->savedBy = auth()->user()->id;
                     $error_save = !$pokaz->save();
                     $error_message = '';
                 } else {
@@ -88,6 +92,7 @@ class AdminController extends Controller
                 $pokaz->month = $request->get('month');
                 $pokaz->water = $request->get('water');
                 $pokaz->warm = $request->get('warm');
+                $pokaz->savedBy = auth()->user()->id;
                 $error_save = !$pokaz->save();
                 $error_message = '';
             }
@@ -108,14 +113,19 @@ class AdminController extends Controller
     //формирование квитанции менеджером за квартиру
     public function adminCalcCreate()
     {
-
-       // $result = $this->calcService->pull();
-
+        if (!auth()->user()->is_admin && !auth()->user()->is_manager){
+            abort(403,'Доступ запрещен!');
+        }
         return view('admin.calc.create', [
         ]);
     }
+
     public function adminCalc(Request $request)
     {
+        if (!auth()->user()->is_admin && !auth()->user()->is_manager){
+            abort(403,'Доступ запрещен!');
+        }
+
         $allowedFlatsList = implode(',',Flat::allowedFlats);
         $rules = [
             'flat' => "required|in:$allowedFlatsList",
@@ -126,69 +136,82 @@ class AdminController extends Controller
             return back()->withErrors(['msg' => $exception->getMessage()])->withInput();
         }
 
-        if (in_array($request->input('flat'),Flat::admin_flats)){
+        if (in_array($request->input('flat'),Flat::adminFlats)){
             echo 'Ошибка! Нельзя формировать квитанцию по этой квартире!';
             exit();
         }
 
-        $periodParams = Pokaz::getRepPeriodAdmin();
-        //dd($periodParams);
-
-        //$period = Pokaz::getRepPeriod();
-        //dd($period);
-
-        $flat = Flat::where('number',$request->input('flat'))->first();
-        if ($flat == null){
-            echo "Ошибка! Не найдена квартира пользователя!";
-            exit();
-        }
-
-        $pokaz = Pokaz::where('flat',$flat->number)->where('year',$periodParams['rep_year'])->where('month',$periodParams['rep_month'])->first();
-        if ($pokaz == null){
-            echo "Ошибка! Не занесены показания за текущий период!";
-            exit();
-        }
-        $pokaz_prev = Pokaz::where('flat',$flat->number)->where('year',$periodParams['rep_year_prev'])->where('month',$periodParams['rep_month_prev'])->first();
-        if ($pokaz_prev == null){
-            echo "Ошибка! Не занесены показания за предыдущий период!";
-            exit();
-        }
-        $tarif = Tarif::find(1);
-        if ($tarif == null){
-            echo "Ошибка! Не найдены тарифы!";
-            exit();
-        }
-
-
-        $payment = Pokaz::getPayment($pokaz,$pokaz_prev,$tarif,$flat,$periodParams);
-
-
-        $html = Pokaz::formatInvoice($payment);
-
-        //сохраняем в кеш подготовленную html-строку для последующего скачивания в pdf
-        Cache::put('generate_' . $flat->number, $html, Pokaz::REFRESH_TIME);
-        /*
-        return view('pokaz.calc', [
-            'payment' => $payment,
-        ]);
-        */
+        $payment = $this->calcService->getServiceData($request->input('flat'));
 
         return view('admin.calc.calc', [
             'payment' => $payment,
         ]);
     }
 
-
     public function adminWarm()
     {
+        if (!auth()->user()->is_admin && !auth()->user()->is_manager){
+            abort(403,'Доступ запрещен!');
+        }
+
         //если по всем квартирам занесены показания и занесены текущие показания общедомового счетчика тепла
         $result = $this->calcService->pull();
+
+        //сохраняем дополнительный тариф по теплу, если он рассчитан
+        if ($result['tarifAdditional'] !== null){
+            $tarifw = Tarifw::where('year',$result['rep_year'])->where('month',$result['rep_month'])->get()->first();
+            if ($tarifw == null){
+                Tarifw::create([
+                    'year' => $result['rep_year'],
+                    'month' => $result['rep_month'],
+                    'tarifAdditional' => $result['tarifAdditional']
+                ]);
+            }
+        }
 
         return view('admin.calc.warm', [
             'flatsWithoutPokaz_str' => count($result['flatsWithoutPokaz']) > 0? implode(',',$result['flatsWithoutPokaz']): '',
             'counter' => $result['counter'],
             'rep_month' => Pokaz::getMonthName($result['rep_month']),
             'rep_year' => $result['rep_year'],
+        ]);
+    }
+
+    //формирование квитанции менеджером за тепло
+    public function adminWcreate()
+    {
+        if (!auth()->user()->is_admin && !auth()->user()->is_manager){
+            abort(403,'Доступ запрещен!');
+        }
+
+        $periodParams = Pokaz::getRepPeriodAdmin();
+        $tarifw = Tarifw::where('year',$periodParams['rep_year'])->where('month',$periodParams['rep_month'])->get()->first();
+        if ($tarifw == null){
+            echo 'Не рассчитан дополнительный тариф по отоплению за отчетный период!';
+            exit();
+        }
+        return view('admin.calc.wcreate');
+    }
+
+    public function adminWinvoice(Request $request)
+    {
+        if (!auth()->user()->is_admin && !auth()->user()->is_manager){
+            abort(403,'Доступ запрещен!');
+        }
+
+        $allowedFlatsList = implode(',',Flat::allowedFlats);
+        $rules = [
+            'flat' => "required|in:$allowedFlatsList",
+        ];
+        try {
+            $validatedData = $request->validate($rules);
+        } catch (\ValidationException $exception) {
+            return back()->withErrors(['msg' => $exception->getMessage()])->withInput();
+        }
+        $data = $this->calcService->getWarmData($request->input('flat'));
+
+        return view('admin.calc.winvoice', [
+                'data' => $data
         ]);
     }
 }

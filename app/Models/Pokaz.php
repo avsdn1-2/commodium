@@ -11,20 +11,21 @@ class Pokaz extends Model
 {
     use HasFactory;
     const START_POKAZ_PERIOD = 24;
-    const END_POKAZ_PERIOD = 16;
-    const WARM_MULTIPLIER = 1.1;
+    const END_POKAZ_PERIOD = 2;
     const REFRESH_TIME = 1800;
     const admin_email = 'avsdn1@gmail.com';
-    const kVtToGkal = 1163.06;
+    const manager_email = 'kommodium@gmail.com';
+
 
 
     protected $fillable = [
         'water',
-        'warm'
+        'warm',
+        'savedBy'
     ];
-    public function flat()
+    public function getFlat()
     {
-        return $this->belongsTo(Flat::class);
+        return $this->belongsTo(Flat::class,'flat','number');
     }
 
     public static function getRepPeriod(){
@@ -45,13 +46,24 @@ class Pokaz extends Model
             $result['rep_year'] = $rep_year;
             return $result;
         }
-        /*
-        $dt = '2022-02-03';
-        $year = date('Y',strtotime($dt));
-        $month = date('n',strtotime($dt));
-        $day = date('j',strtotime($dt));
-        $date = date('Y-m-d',strtotime($dt));
-        */
+        function getMonth_m($month)
+        {
+            switch ($month){
+                case 1:
+                case 2:
+                case 3:
+                case 4:
+                case 5:
+                case 6:
+                case 7:
+                case 8:
+                case 9:
+                    return '0' . $month;
+                    break;
+                default:
+                    return $month;
+            }
+        }
 
         $year = (int)date('Y',time());
         $month = (int)date('n',time());
@@ -69,12 +81,16 @@ class Pokaz extends Model
 
         $res_prev = getMonthYear($day_prev,$month_prev,$year_prev);
 
+        $date_next = Carbon::createFromFormat('Y-m-d', $res['rep_year'] . '-' . getMonth_m($res['rep_month']) . '-01')->addMonth()->format('Y-m-d');
+
         $result['day'] = $day;
         $result['rep_month'] = $res['rep_month'];
-        $result['rep_month_m'] = $month_m;
+        $result['rep_month_m'] = getMonth_m($res['rep_month']);
         $result['rep_year'] = $res['rep_year'];
         $result['rep_month_prev'] = (int)$res_prev['rep_month'];
         $result['rep_year_prev'] = (int) $res_prev['rep_year'];
+        $result['rep_month_next'] = date('n',strtotime($date_next)); //для отображения в квитанци (следующий месяц за отчетным)
+        $result['rep_year_next'] = date('Y',strtotime($date_next));  //для отображения в квитанци (следующий месяц за отчетным)
 
         return $result;
     }
@@ -89,6 +105,7 @@ class Pokaz extends Model
         $date = date('Y-m-d',time());
         $date_prev = Carbon::createFromFormat('Y-m-d', $date)->subMonth()->format('Y-m-d');
 
+
         if ($day >= self::START_POKAZ_PERIOD){
             $rep_month = $month;
             $rep_month_m = $month_m;
@@ -98,13 +115,17 @@ class Pokaz extends Model
             $rep_month_m = (int)date('m',strtotime($date_prev));
             $rep_year = (int)date('Y',strtotime($date_prev));
         }
+        $date_next = Carbon::createFromFormat('Y-m-d', $rep_year . '-' . $rep_month_m . '-01')->addMonth()->format('Y-m-d');
         return [
             'day' => $day,
             'rep_month' => $rep_month,
             'rep_month_m' => $rep_month_m,
             'rep_year' => $rep_year,
             'rep_month_prev' => self::getPrevMonthYear($rep_year,$rep_month)['month'],
-            'rep_year_prev' => self::getPrevMonthYear($rep_year,$rep_month)['year']
+            'rep_year_prev' => self::getPrevMonthYear($rep_year,$rep_month)['year'],
+            'rep_month_next' => date('n',strtotime($date_next)), //для отображения в квитанци (следующий месяц за отчетным)
+            'rep_year_next' => date('Y',strtotime($date_next)),  //для отображения в квитанци (следующий месяц за отчетным)
+
         ];
     }
 
@@ -131,14 +152,42 @@ class Pokaz extends Model
             return '0' . $month;
         }
     }
-    public static function getData($volume,$year,$month)
+    //перевод в гигакаллории
+    public static function toGcal($pokaz,$counterType)
+    {
+        switch ($counterType){
+            case 1:
+                return $pokaz * 0.000861;
+            case 2:
+                return $pokaz * 0.861;
+            case 3:
+                return $pokaz;
+            case 4:
+                return  $pokaz * 0.239;
+        }
+    }
+    //определение единицы измерения
+    public static function getUnits($counterType)
+    {
+        switch ($counterType){
+            case 1:
+                return 'кВт';
+            case 2:
+                return 'МВт';
+            case 3:
+                return 'Гкал';
+            case 4:
+                return  'Гдж';
+        }
+    }
+    public static function getDataInGcal($volume,$year,$month):array
     {
         if ($volume == 'all'){
-            $pokazs = Pokaz::where('year',$year)->where('month',$month)->get();
-            $pokazs_prev = Pokaz::where('year',self::getPrevMonthYear($year,$month)['year'])->where('month',self::getPrevMonthYear($year,$month)['month'])->get();
+            $pokazs = Pokaz::with('getFlat')->where('year',$year)->where('month',$month)->get();
+            $pokazs_prev = Pokaz::with('getFlat')->where('year',self::getPrevMonthYear($year,$month)['year'])->where('month',self::getPrevMonthYear($year,$month)['month'])->get();
         } else {
-            $pokazs = Pokaz::where('year',$year)->where('month',$month)->where('flat',Auth::user()->flat)->get();
-            $pokazs_prev = Pokaz::where('year',self::getPrevMonthYear($year,$month)['year'])->where('month',self::getPrevMonthYear($year,$month)['month'])->where('flat',Auth::user()->flat)->get();
+            $pokazs = Pokaz::with('getFlat')->where('year',$year)->where('month',$month)->where('flat',Auth::user()->flat)->get();
+            $pokazs_prev = Pokaz::with('getFlat')->where('year',self::getPrevMonthYear($year,$month)['year'])->where('month',self::getPrevMonthYear($year,$month)['month'])->where('flat',Auth::user()->flat)->get();
         }
         if ($pokazs == null){
             echo 'Ошибка! Не найдены показания за текущий период!';
@@ -150,15 +199,16 @@ class Pokaz extends Model
         }
 
         $prev = [];
-
+        //dd($pokazs_prev);
         foreach ($pokazs_prev as $pokaz)
         {
-            $prev[$pokaz->flat] = $pokaz->warm;
+            $prev[$pokaz->flat] = self::toGcal($pokaz->warm,$pokaz->getFlat->counterType);
         }
         $total = 0;
         foreach ($pokazs as $pokaz)
         {
-            $total += $pokaz->warm - $prev[$pokaz->flat];
+            $total += self::toGcal($pokaz->warm,$pokaz->getFlat->counterType) - $prev[$pokaz->flat];
+            $pokaz->warm = self::toGcal($pokaz->warm,$pokaz->getFlat->counterType);
         }
 
         $counter = Counter::where('year',$year)->where('month',$month)->first();
@@ -179,6 +229,43 @@ class Pokaz extends Model
         ];
     }
 
+    public static function getDataInRaw($volume,$year,$month):array
+    {
+        if ($volume == 'all'){
+            $pokazs = Pokaz::with('getFlat')->where('year',$year)->where('month',$month)->get();
+            $pokazs_prev = Pokaz::with('getFlat')->where('year',self::getPrevMonthYear($year,$month)['year'])->where('month',self::getPrevMonthYear($year,$month)['month'])->get();
+        } else {
+            $pokazs = Pokaz::with('getFlat')->where('year',$year)->where('month',$month)->where('flat',Auth::user()->flat)->get();
+            $pokazs_prev = Pokaz::with('getFlat')->where('year',self::getPrevMonthYear($year,$month)['year'])->where('month',self::getPrevMonthYear($year,$month)['month'])->where('flat',Auth::user()->flat)->get();
+        }
+        if ($pokazs == null){
+            echo 'Ошибка! Не найдены показания за текущий период!';
+            exit();
+        }
+        if ($pokazs_prev == null){
+            echo 'Ошибка! Не найдены показания за предыдущий период!';
+            exit();
+        }
+        //формируем массив единиц измерения тепла
+        $units = [];
+        foreach ($pokazs as $pokaz)
+        {
+            $units[$pokaz->flat] = self::getUnits($pokaz->getFlat->counterType);
+        }
+        //формируем массив предыдущих показаний
+        $prev = [];
+        foreach ($pokazs_prev as $pokaz)
+        {
+            $prev[$pokaz->flat] = $pokaz->warm;
+        }
+
+        return [
+            'pokazs' => $pokazs,
+            'prev' => $prev,
+            'units' => $units,
+        ];
+    }
+
 
     public static function getPayment($pokaz,$pokaz_prev,$tarif,$flat,$periodParams)
     {
@@ -195,17 +282,23 @@ class Pokaz extends Model
             'flat' => $flat->number,
             'fio' => $flat->name . ' ' . mb_substr($flat->first_name,0,1) . '.' . mb_substr($flat->mid_name,0,1) . '.',
             'month_name' => Pokaz::getMonthName($periodParams['rep_month']),
+            'month_name_next' => Pokaz::getMonthName($periodParams['rep_month_next']),
+            'month_next_m' => Pokaz::formatMonth($periodParams['rep_month_next']),
             'water_tarif' => $tarif->water,
             'service_tarif' => $tarif->service,
-            'square' => $flat->square,
+            'square_total' => $flat->square_total,
+            'square_warm' => $flat->square_warm,
             'warmCounter' => $flat->warmCounter,
             'year' => $periodParams['rep_year'],
             'water' => ($pokaz->water - $pokaz_prev->water) * $tarif->water,
-            'warm' => $flat->warmCounter == true? ($pokaz->warm !== null? number_format(round(($pokaz->warm - $pokaz_prev->warm) / self::kVtToGkal * $tarif->warm * self::WARM_MULTIPLIER,2),2,'.',' '): 0 ) : 3000,
+            'water_current' => $pokaz->water,
+            'water_previous' => $pokaz_prev->water,
+            'tarif_water' => $tarif->water,
             'warm_current' => number_format($pokaz->warm,0,'.',' '),
             'warm_previous' => number_format($pokaz_prev->warm,0,'.',' '),
-            'service' => round($flat->square * $tarif->service,0),
-            'lift' => round($tarif->lift * ($flat->residents / $residents_all),2),
+            'service' => round($flat->square_total * $tarif->service,0),
+            'tarif_service' => $tarif->service,
+            'lift' => (int)$flat->useLift * round($tarif->lift * ($flat->residents / $residents_all),2),
             'rubbish' => round($tarif->rubbish * ($flat->residents / $residents_all),2),
             'parkingCleaning' => $tarif->parkingCleaning,
             'parkingLightening' => $tarif->parkingLightening,
@@ -219,14 +312,6 @@ class Pokaz extends Model
 
     public static function formatInvoice($payment)
     {
-        /*
-        $html = '<table>';
-        $html .= '<tr>
-                     <td>' . $array['service'] . '</td>
-                     <td>' . $array['lift'] . '</td>
-                  </tr>';
-        $html .= '<table>';
-        */
         /*
         "<html><head><style>body { font-family: DejaVu Sans }</style>".
         "<body>А вот и кириллица</body>".
@@ -275,14 +360,15 @@ class Pokaz extends Model
                     .w_170 {
                      width:130px;
                     }
-
-
+                    .f-small{
+                    font-size:9px;
+                    }
 
                 }</style><body>';
-        $html .= '<div>ОСББ "Коммодіум" 49098 м.Дніпро, пров. Любарського, 4а Р/рах. UA63 305299 00000 26007060006136 (26007060006136) в АТ КБ "Приватбанк",
-                       МФО 305299, ЄДРПОУ 35807177</div>';
-        $html .= '<div>РАХУНОК № ' . $payment['flat'] . ' / ' . $payment['month_m'] . '</div>';
-        $html .= '<div>На сплату комунальних послуг       ' . $payment['fio'] . '      ' . $payment['month_name'] . ' ' . $payment['year'] . 'p.' . '</div>';
+        $html .= '<div>ОСББ "Коммодіум" 49098 м.Дніпро, пров. Любарського, 4а, ЄДРПОУ 35807177, Р/рах. UA63 305299 00000 26007060006136 (26007060006136) в АТ КБ "Приватбанк",
+                       МФО 305299</div>';
+        $html .= '<div>РАХУНОК № ' . $payment['flat'] . ' / ' . $payment['month_next_m'] . '</div>';
+        $html .= '<div>На сплату комунальних послуг       ' . $payment['fio'] . '      ' . $payment['month_name_next'] . ' ' . $payment['year'] . 'p.' . '</div>';
         $html .= '<div style="width:500px;margin:0 auto">
         <table class="table table-striped">
             <thead>
@@ -305,7 +391,10 @@ class Pokaz extends Model
                 <td>' . $payment['rubbish'] . '</td>
             </tr>
             <tr>
-                <td>Вода (тариф ' . $payment['water_tarif'] .' грн)</td>
+                <td>
+                Вода (тариф ' . $payment['water_tarif'] .' грн)<br>
+                <span class="f-small">Показання ліч-ка, поточні: ' . $payment['water_current'] . ', попередні: ' . $payment['water_previous'] .'</span>
+            </td>
                 <td>' . $payment['water'] . '</td>
             </tr>
             <tr>
@@ -330,38 +419,91 @@ class Pokaz extends Model
             </tbody>
         </table>
         </div>';
-        /*
-        if ($payment['warm'] !== 0) {
-            $html .=
-               '<div style="width:120px;font-weight:bold;margin:0 auto">ОПАЛЕННЯ</div>
-                <div style="width:700px;margin:0 auto">
-                    <table class="table table-striped">
-                        <thead>
-                        <tr>
-                            <th scope="col" class="w_40" style="text-align:center">Кв-ра</th>
-                            <th scope="col" class="w_170">ПІБ</th>
-                            <th scope="col" class="w_40">кв. м</th>
-                            <th scope="col" class="w_70">Лічильник</th>
-                            <th scope="col" class="w_70">Сума</th>
-                            <th scope="col" class="w_140" colspan="2" style="text-align:center">Показання лічильника<br>попер./поточні</th>
-                        </tr>
-                        </thead>
 
-                        <tbody>
-                        <tr>
-                            <td>' . $payment['flat'] . '</td>
-                            <td>' . $payment['fio'] . '</td>
-                            <td>' . $payment['square'] . '</td>
-                            <td>' . ($payment['warmCounter'] == 1 ? 'є' : 'нема') . '</td>
-                            <td>' . $payment['warm'] . '</td>
-                            <td>' . $payment['warm_previous'] . '</td>
-                            <td>' . $payment['warm_current'] . '</td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>';
-            }
-        */
+        $html .= '</div></body></head></html>';
+
+        return $html;
+    }
+
+    public static function formatInvoiceWarm($data)
+    {
+        $total = $data['payment_main'] +  $data['payment_additional'];
+
+        $html = '<html><head><style>body {
+                font-family: DejaVu Sans;
+                table {
+                    border-spacing: 0 10px;
+                    font-weight: bold;
+                    }
+                    th {
+                    padding: 10px 20px;
+                    background: #56433D;
+                    color: #F9C941;
+                    border-right: 2px solid;
+                    font-size: 12px;
+                    }
+                    th:first-child {
+                    text-align: left;
+                    }
+                    th:last-child {
+
+                    }
+                    td {
+                    vertical-align: middle;
+                    padding: 10px;
+                    font-size: 12px;
+                    text-align: center;
+                    border-top: 2px solid #56433D;
+                    border-bottom: 2px solid #56433D;
+                    border-right: 2px solid #56433D;
+                    }
+                    td:first-child {
+                    border-left: 2px solid #56433D;
+                    }
+                    .w_40 {
+                    width:40px;
+                    }
+                    .w_70 {
+                     width:50px;
+                    }
+                    .w_140 {
+                     width:140px;
+                    }
+                    .w_170 {
+                     width:130px;
+                    }
+
+
+
+                }</style><body>';
+        $html .= '<div>ОСББ "Коммодіум", ЄДРПОУ 35807177, 49098 м.Дніпро, пров. Любарського, 4а, Р/рах. UA63 305299 00000 26007060006136 в АТ КБ "Приватбанк",
+                       МФО 305299</div>';
+        $html .= '<div>КВИТАНЦІЯ  № ' . $data['flat'] . ' / ' . $data['month'] . '</div>';
+        $html .= '<div>на сплату за спожиту теплову енергію за        ' . $data['month_name'] . '      '  . $data['year'] . 'p.' . '</div>';
+        $html .= '<div style="width:500px;margin:0 auto">
+        <table class="table table-striped">
+            <tbody>
+            <tr>
+                <td>Опалювальна площа, кв.м</td>
+                <td>' . $data['square'] . '</td>
+            </tr>
+            <tr>
+                <td>за показниками квартирного лічильника тепла</td>
+                <td>' . $data['payment_main'] . '</td>
+            </tr>
+            <tr>
+                <td>донарахування за розрахунковими показниками загальнобудинкового лічильника спожитої теплової енергії (тариф - ' . $data['tarifAdditional'] . ' грн за кв.м)</td>
+                <td>' . $data['payment_additional'] . '</td>
+            </tr>
+            <tr>
+                <td>Всього до сплати</td>
+                <td>' . $total . '</td>
+            </tr>
+
+            </tbody>
+        </table>
+        </div>';
+
         $html .= '</div></body></head></html>';
 
         return $html;
@@ -398,7 +540,7 @@ class Pokaz extends Model
         }
         return $month_name;
     }
-
+    /*
     public static function sendEmail($to,$subject)
     {
         // $subject = "Квитанция";
@@ -456,4 +598,5 @@ class Pokaz extends Model
         //unlink($filepath);
 
     }
+    */
 }

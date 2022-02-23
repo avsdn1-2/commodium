@@ -63,7 +63,7 @@ class CounterController extends Controller
         $rules = [
             'year' => 'required|integer',
             'month' => 'required|integer',
-            'warm' => 'required|integer'
+            'warm' => 'required|numeric'
         ];
         try {
             $validatedData = $request->validate($rules);

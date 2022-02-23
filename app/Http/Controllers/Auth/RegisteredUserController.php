@@ -58,11 +58,6 @@ class RegisteredUserController extends Controller
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
             ]));
-            //занесение квартиры в пулл для расчетов стоимости тепла
-            $result = Pull::where('flat',$request->flat)->get()->first();
-            if ($result == null && !in_array($request->flat,Pokaz::admin_flats)){
-                Pull::create(['flat' => $request->flat]);
-            }
 
             event(new Registered($user));
             //return redirect(RouteServiceProvider::HOME);

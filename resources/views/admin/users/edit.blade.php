@@ -1,6 +1,6 @@
-@extends('admin.content')
+@extends('admin.layout')
 
-@section('title') Edit user @endsection
+@section('title') Редактирование пользователя @endsection
 
 @section('content')
     @include('admin.users.form', compact('user'))

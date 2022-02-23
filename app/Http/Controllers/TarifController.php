@@ -64,6 +64,7 @@ class TarifController extends Controller
         }
         $rules = [
             'water' => 'required|numeric',
+            'water_delivery' => 'required|numeric',
             'warm' => 'required|numeric',
             'service' => 'required|numeric',
             'lift' => 'required|numeric',
@@ -85,6 +86,7 @@ class TarifController extends Controller
             $tarif = new Tarif();
         }
         $tarif->water = $request->get('water');
+        $tarif->water_delivery = $request->get('water_delivery');
         $tarif->warm = $request->get('warm');
         $tarif->service = $request->get('service');
         $tarif->lift = $request->get('lift');

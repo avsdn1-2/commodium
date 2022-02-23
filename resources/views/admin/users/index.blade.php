@@ -1,6 +1,6 @@
-@extends('admin.content')
+@extends('admin.layout')
 
-@section('title') Users @endsection
+@section('title') Пользователи @endsection
 
 @section('content')
     <div class="col-12">
@@ -11,24 +11,27 @@
                 <div class="card-tools">
                     {{ $users->links() }}
                 </div>
+
             </div>
             <!-- /.card-header -->
             <div class="card-body">
                 <table class="table">
                     <thead>
                         <tr>
-                            <th>#</th>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Role</th>
-                            <th></th>
+                            <th>id</th>
+                            <th>Имя</th>
+                            <th>Квартира</th>
+                            <th>Емейл</th>
+                            <th>Роль</th>
+                            <th>Управление</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($users as $user)
                         <tr>
-                            <td>{{ $user->getKey() }}</td>
+                            <td>{{ $user->id }}</td>
                             <td>{{ $user->name }}</td>
+                            <td>{{ $user->flat }}</td>
                             <td>{{ $user->email }}</td>
                             <td>
                                 <span class="badge {{ $user->is_admin ? 'badge-success' : 'badge-danger'}}">Admin</span>
@@ -36,8 +39,9 @@
                             </td>
                             <td>
                                 <div class="btn-group">
-                                    <a href="{{ route('admin.users.edit', ['user' => $user->getKey()]) }}" class="btn btn-warning">Edit</a>
-                                    <a href="{{ route('admin.users.delete', ['user' => $user->getKey()]) }}" class="btn btn-danger">Delete</a>
+                                    <a href="{{ route('user.edit', ['user' => $user]) }}" class="btn btn-warning">Edit</a>
+                                    <a href="{{ route('user.delete', ['user' => $user]) }}" class="btn btn-danger">Delete</a>
+
                                 </div>
                             </td>
                         </tr>

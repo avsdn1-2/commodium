@@ -9,13 +9,13 @@ class Generate extends Model
 {
     use HasFactory;
 
-    public static function sendEmail($to,$flat,$month)
+    public static function sendEmail($to,$flat,$month,$filename)
     {
         $subject = "КВИТАНЦІЯ № " . $flat . ' / ' . $month;
 
         $message = "invoice";
         // название файла
-        $filename = "invoice.pdf";
+        //$filename = 'invoice_' . Auth()->user()->flat . '.pdf';
 
         // папка + название файла
         $filepath = base_path('storage/app/public/' . $filename);
@@ -64,7 +64,14 @@ class Generate extends Model
         mail($to,$subject,$multipart,$mailheaders);
 
         // удаление файла
-        unlink($filepath);
+        //unlink($filepath);
 
+    }
+    public static function deleteFile($filename)
+    {
+        // папка + название файла
+        $filepath = base_path('storage/app/public/' . $filename);
+        // удаление файла
+        unlink($filepath);
     }
 }

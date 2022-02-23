@@ -1,12 +1,7 @@
 <!-- Sidebar Menu -->
 <nav class="mt-2">
     <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
-        <li class="nav-item">
-            <a href="{{ route('home') }}" class="nav-link">
-                <i class="far fa-circle nav-icon"></i>
-                <p>Домашняя страница</p>
-            </a>
-        </li>
+
         <h2 style="color:white">Функции менеджера</h2>
         @if (auth()->user()->is_manager || auth()->user()->is_admin)
         <li class="nav-item">
@@ -24,6 +19,12 @@
         <li class="nav-item">
             <a href="{{ route('admin.warm') }}" class="nav-link">
                 <i class="far fa-circle nav-icon"></i>
+                <p>Проверка наличия показаний по отоплению</p>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ route('admin.wcreate') }}" class="nav-link">
+                <i class="far fa-circle nav-icon"></i>
                 <p>Квитанции по отоплению</p>
             </a>
         </li>
@@ -33,11 +34,25 @@
                 <p>Занести показания<br> общедомового счетчика</p>
             </a>
         </li>
+        <li class="nav-item">
+            <a href="{{ route('tarif.edit') }}" class="nav-link">
+                <i class="far fa-circle nav-icon"></i>
+                <p>Изменить тариф</p>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a href="{{ route('flat.index') }}" class="nav-link">
+                <i class="far fa-circle nav-icon"></i>
+                <p>Квартиры</p>
+            </a>
+        </li>
         @endif
 
 
         @if (auth()->user()->is_admin)
-            <p>Функции админа</p>
+            <h2 style="color:white">Функции админа</h2>
+
             <li class="nav-item">
                 <a href="{{ route('email.create') }}" class="nav-link">
                     <i class="far fa-circle nav-icon"></i>
@@ -50,33 +65,22 @@
                     <p>Добавить квартиру</p>
                 </a>
             </li>
-            <li class="nav-item">
-                <a href="{{ route('tarif.edit') }}" class="nav-link">
-                    <i class="far fa-circle nav-icon"></i>
-                    <p>Изменить тариф</p>
-                </a>
-            </li>
+
             <li class="nav-item">
                 <a href="{{ route('pull.create') }}" class="nav-link">
                     <i class="far fa-circle nav-icon"></i>
                     <p>Добавить квартиру в пулл</p>
                 </a>
             </li>
+
             <li class="nav-item">
-                <a href="{{ route('pull.delete') }}" class="nav-link">
+                <a href="{{ route('user.index') }}" class="nav-link">
                     <i class="far fa-circle nav-icon"></i>
-                    <p>Удалить квартиру из пулла</p>
+                    <p>Пользователи</p>
                 </a>
             </li>
-
-
         @endif
-{{--        <li class="nav-item">--}}
-{{--            <a href="{{ route('admin.orders.index') }}" class="nav-link">--}}
-{{--                <i class="far fa-circle nav-icon"></i>--}}
-{{--                <p>Orders</p>--}}
-{{--            </a>--}}
-{{--        </li>--}}
+
     </ul>
 </nav>
 <!-- /.sidebar-menu -->

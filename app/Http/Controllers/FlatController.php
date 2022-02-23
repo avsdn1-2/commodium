@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Flat;
+use App\Models\Pokaz;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Contracts\Validation\ValidationException;
@@ -18,7 +19,11 @@ class FlatController extends Controller
      */
     public function index()
     {
-        //
+        if (!Auth::user()->is_admin && !Auth::user()->is_manager) {
+            abort(403,'Доступ запрещен!');
+        }
+        $flats = Flat::paginate(6);
+        return view('admin.flat.index',compact('flats'));
     }
 
     /**
@@ -46,9 +51,14 @@ class FlatController extends Controller
             abort(403,'Доступ запрещен!');
         }
         $allowedFlatsList = implode(',',Flat::allowedFlats);
+        $allowedCounterTypeList = implode(',',['1','2','3','4']);
         $rules = [
             'number' => "required|string|unique:flats|in:$allowedFlatsList",
-            'square' => 'required|numeric',
+            'warmCounter' => 'boolean|nullable',
+            'counterType' => "required|in:$allowedCounterTypeList",
+            'useLift' => 'boolean|nullable',
+            'square_total' => 'required|numeric',
+            'square_warm' => 'required|numeric',
             'residents' => 'required|integer',
             'privilege' => 'nullable|numeric',
             'name' => 'required|string',
@@ -59,39 +69,30 @@ class FlatController extends Controller
         try {
                 $validatedData = $request->validate($rules);
         } catch (\ValidationException $exception) {
-            //return back()->withErrors(['msg' => 'Введены некорректные данные'])->withInput();
             return back()->withErrors(['msg' => $exception->getMessage()])->withInput();
         }
 
         /** @var Flat $flat */
         $flat = new Flat();
         $flat->number = $request->get('number');
-        $flat->square = $request->get('square');
+        $flat->square_total = $request->get('square_total');
+        $flat->square_warm = $request->get('square_warm');
         $flat->residents = $request->get('residents');
-        $flat->warmCounter = !empty($request->get('warmCounter'));
+        //$flat->warmCounter = !empty($request->get('warmCounter'));
+        $flat->warmCounter = true;
+        $flat->counterType = $request->get('counterType');
         $flat->useLift = !empty($request->get('useLift'));
-        $flat->privilege = empty($request->get('privilege'))? 0: $request->get('privilege');
+        //$flat->privilege = empty($request->get('privilege'))? 0: $request->get('privilege');
+        $flat->privilege = 0;
         $flat->name = $request->get('name');
         $flat->first_name = $request->get('first_name');
         $flat->mid_name = $request->get('mid_name');
 
         $flat->save();
-        $flat->user()->associate(Auth::user());
 
-        //return redirect(route('home'));
         return view('admin.flat.update');
     }
 
-    /**
-     * Display the specified resource.
-     *
-     * @param  \App\Models\Flat  $flat
-     * @return \Illuminate\Http\Response
-     */
-    public function show(Flat $flat)
-    {
-        //
-    }
 
     /**
      * Show the form for editing the specified resource.
@@ -101,7 +102,10 @@ class FlatController extends Controller
      */
     public function edit(Flat $flat)
     {
-        //
+        if (!Auth::user()->is_admin && !Auth::user()->is_manager) {
+            abort(403,'Доступ запрещен!');
+        }
+        return view('admin.flat.edit',compact('flat'));
     }
 
     /**
@@ -113,17 +117,41 @@ class FlatController extends Controller
      */
     public function update(Request $request, Flat $flat)
     {
-        //
+        if (!Auth::user()->is_admin && !Auth::user()->is_manager) {
+            abort(403,'Доступ запрещен!');
+        }
+        $allowedFlatsList = implode(',',Flat::allowedFlats);
+        $allowedCounterTypeList = implode(',',['1','2','3','4']);
+        $rules = [
+            'number' => "required|string|in:$allowedFlatsList",
+            'counterType' => "required|in:$allowedCounterTypeList",
+            'useLift' => 'boolean|nullable',
+            'square_total' => 'required|numeric',
+            'square_warm' => 'required|numeric',
+            'residents' => 'required|integer',
+            'name' => 'required|string',
+            'first_name' => 'required|string',
+            'mid_name' => 'required|string',
+        ];
+
+        try {
+            $validatedData = $request->validate($rules);
+        } catch (\ValidationException $exception) {
+            return back()->withErrors(['msg' => $exception->getMessage()])->withInput();
+        }
+        $flat->update([
+            'number' => $request->get('number'),
+            'square_total' =>  $request->get('square_total'),
+            'square_warm' =>  $request->get('square_warm'),
+            'residents' => $request->get('residents'),
+            'counterType' => $request->get('counterType'),
+            'useLift' => !empty($request->get('useLift')),
+            'name' => $request->get('name'),
+            'first_name' => $request->get('first_name'),
+            'mid_name' => $request->get('mid_name'),
+        ]);
+        return redirect(route('flat.index'));
     }
 
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  \App\Models\Flat  $flat
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy(Flat $flat)
-    {
-        //
-    }
+
 }

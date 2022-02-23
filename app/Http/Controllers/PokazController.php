@@ -6,6 +6,7 @@ use App\Mail\ErrorMessage;
 use App\Models\Pokaz;
 use App\Models\Tarif;
 use App\Models\Flat;
+use App\Services\CalcService;
 use App\Services\HelpService;
 use App\Services\PokazServiceInterface;
 use App\Services\PokazService;
@@ -15,6 +16,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Carbon as Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Throwable;
 
 
@@ -22,22 +25,15 @@ class PokazController extends Controller
 {
     private $helpService;
     private $pokazService;
+    private $calcService;
     //private $middleware;
 
-    public function __construct(HelpService $helpService,PokazService $pokazService) //
+    public function __construct(HelpService $helpService,PokazService $pokazService,CalcService $calcService) //
     {
         $this->helpService = $helpService;
         $this->pokazService = $pokazService;
+        $this->calcService = $calcService;
         $this->middleware('auth');
-    }
-    /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function index()
-    {
-        //
     }
 
     /**
@@ -45,6 +41,7 @@ class PokazController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
+    //показ формы для заведения показаний
     public function create()
     {
         $user = auth()->user();
@@ -81,13 +78,14 @@ class PokazController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
+    //сохранение введенных показаний
     public function store(Request $request)
     {
         $this->validate($request, [
             'water' => 'required|integer',
-            'warm' => 'nullable|integer',
+            'warm' => 'nullable|numeric',
             'water_prev' => 'integer',
-            'warm_prev' => 'nullable|integer'
+            'warm_prev' => 'nullable|numeric'
         ]);
         $user = auth()->user();
         $period = Pokaz::getRepPeriod();
@@ -110,25 +108,29 @@ class PokazController extends Controller
 
     }
 
-
+    //показ формы для формирования статистики
     public function list()
     {
         $result = Pokaz::getRepPeriodAdmin();
 
-        return view('pokaz.list', [
-          //  'pokazs' => $pokazs,
+        return view('pokaz.list_gcal', [
             'rep_month' => $result['rep_month'],
             'rep_year' => $result['rep_year'],
             'volume' => '',
+            'units' => '',
         ]);
     }
 
+    //отображение запрошенной статистики показаний
     public function info(Request $request)
     {
+        $allowedVolumeList = implode(',',['my','all']);
+        $allowedUnitsList = implode(',',['gcal','raw']);
         $rules = [
             'year' => 'required|integer',
             'month' => 'required|integer',
-           // 'volume' => 'required|in(["my","all"])',
+            'volume' => "required|in:$allowedVolumeList",
+            'units' => "required|in:$allowedUnitsList",
         ];
         try {
             $validatedData = $request->validate($rules);
@@ -136,113 +138,69 @@ class PokazController extends Controller
             return back()->withErrors(['msg' => $exception->getMessage()])->withInput();
         }
 
-        $result = Pokaz::getRepPeriodAdmin();
+        if ($request->get('units') === 'gcal'){
+            try {
+                $data = Pokaz::getDataInGcal($request->get('volume'),$request->get('year'),$request->get('month'));
+            } catch (Throwable $e){
+                Mail::to(Pokaz::admin_email)->send(new ErrorMessage(auth()->user()->email . '|' . $e->getFile() . '|' . $e->getLine() . '|' . $e->getMessage()  ));
+                return redirect(route('error.index'));
+            }
 
-        try {
-            $data = Pokaz::getData($request->get('volume'),$request->get('year'),$request->get('month'));
-        } catch (Throwable $e){
-            Mail::to(Pokaz::admin_email)->send(new ErrorMessage(auth()->user()->email . '|' . $e->getFile() . '|' . $e->getLine() . '|' . $e->getMessage()  ));
-            return redirect(route('error.index'));
+            return view('pokaz.list_gcal', [
+                'pokazs' => $data['pokazs'],
+                'prev' => $data['prev'],
+                'total' => $data['total'],
+                'counter' => $data['counter'],
+                'counter_prev' => $data['counter_prev'],
+                'rep_month' => $request->get('month'),
+                'rep_year' => $request->get('year'),
+                'volume' => $request->get('volume'),
+                'units' => $request->get('units'),
+            ]);
+        } elseif ($request->get('units') === 'raw'){
+            try {
+                $data = Pokaz::getDataInRaw($request->get('volume'),$request->get('year'),$request->get('month'));
+            } catch (Throwable $e){
+                Mail::to(Pokaz::admin_email)->send(new ErrorMessage(auth()->user()->email . '|' . $e->getFile() . '|' . $e->getLine() . '|' . $e->getMessage()  ));
+                return redirect(route('error.index'));
+            }
+
+            return view('pokaz.list_raw', [
+                'pokazs' => $data['pokazs'],
+                'prev' => $data['prev'],
+                'pokaz_units' => $data['units'],
+                'rep_month' => $request->get('month'),
+                'rep_year' => $request->get('year'),
+                'volume' => $request->get('volume'),
+                'units' => $request->get('units'),
+            ]);
+
         }
 
-        return view('pokaz.list', [
-            'pokazs' => $data['pokazs'],
-            'prev' => $data['prev'],
-            'total' => $data['total'],
-            'counter' => $data['counter'],
-            'counter_prev' => $data['counter_prev'],
-        //    'rep_month' => $result['rep_month'],
-        //    'rep_year' => $result['rep_year'],
-            'rep_month' => $request->get('month'),
-            'rep_year' => $request->get('year'),
-            'volume' => $request->get('volume'),
-        ]);
     }
 
+    //формирование квитанции пользователем по своей квартире
     public function calc()
     {
+        echo 'Раздел будет доступен с 25.02.2022г.!';
+        exit();
+
+
         $user = auth()->user();
         if (in_array($user->flat,['admin','admin1'])){
             return redirect(route('error.info_m_kvit'));
         }
 
-        $periodParams = Pokaz::getRepPeriod();
-        $pokaz = Pokaz::where('flat',Auth::user()->flat)->where('year',$periodParams['rep_year'])->where('month',$periodParams['rep_month'])->first();
-        if ($pokaz == null){
-            echo "Ошибка! Не занесены показания за текущий период!";
-            exit();
-        }
-        $pokaz_prev = Pokaz::where('flat',Auth::user()->flat)->where('year',$periodParams['rep_year_prev'])->where('month',$periodParams['rep_month_prev'])->first();
-        if ($pokaz_prev == null){
-            echo "Ошибка! Не занесены показания за предыдущий период!";
-            exit();
-        }
-        $tarif = Tarif::find(1);
-        if ($tarif == null){
-            echo "Ошибка! Не найдены тарифы!";
-            exit();
-        }
-        $flat = Flat::where('number',Auth::user()->flat)->first();
+        $payment = $this->calcService->getServiceData(Auth::user()->flat);
 
-        if ($flat == null){
-            echo "Ошибка! Не найдена квартира пользователя!";
-            exit();
+        if(count($payment) == 0){
+           return  redirect(route('error.no_pokaz'));
         }
-
-        $payment = Pokaz::getPayment($pokaz,$pokaz_prev,$tarif,$flat,$periodParams);
-
-        $html = Pokaz::formatInvoice($payment);
-
-        //сохраняем в кеш подготовленную html-строку для последующего скачивания в pdf
-        Cache::put(Auth::user()->id, $html, Pokaz::REFRESH_TIME);
 
         return view('pokaz.calc', [
             'payment' => $payment,
         ]);
     }
 
-    /**
-     * Display the specified resource.
-     *
-     * @param  \App\Models\Pokaz  $pokaz
-     * @return \Illuminate\Http\Response
-     */
-    public function show(Pokaz $pokaz)
-    {
-        //
-    }
 
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  \App\Models\Pokaz  $pokaz
-     * @return \Illuminate\Http\Response
-     */
-    public function edit(Pokaz $pokaz)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\Pokaz  $pokaz
-     * @return \Illuminate\Http\Response
-     */
-    public function update(Request $request, Pokaz $pokaz)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  \App\Models\Pokaz  $pokaz
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy(Pokaz $pokaz)
-    {
-        //
-    }
 }

@@ -44,6 +44,7 @@ class PokazService
             $pokaz_prev->month = $period['rep_month_prev'];
             $pokaz_prev->water = $water_prev;
             $pokaz_prev->warm = $warm_prev;
+            $pokaz_prev->savedBy = $user->id;
             $pokaz_prev->save();
             //$water_prev = $request->get('water_prev');
            // $warm_prev = $request->get('warm_prev');
@@ -62,6 +63,7 @@ class PokazService
                 $pokaz->month = $period['rep_month'];
                 $pokaz->water = $water;
                 $pokaz->warm = $warm;
+                $pokaz->savedBy = $user->id;
                 $pokaz->save();
             } else {
                 $error_message = "Вы вводите меньшие показания чем за предыдущий период!";
@@ -70,6 +72,7 @@ class PokazService
             if ($water >= $pokaz->water && $warm >= $pokaz->warm){
                 $pokaz->water = $water;
                 $pokaz->warm = $warm;
+                $pokaz->savedBy = $user->id;
                 $pokaz->save();
             } else {
                 $error_message = "Вы вводите меньшие показания по сравнению с введенными ранее!";

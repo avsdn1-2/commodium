@@ -18,4 +18,8 @@ class ErrorController extends Controller
     {
         return view('error.info_m_kvit', []);
     }
+    public function no_pokaz()
+    {
+        return view('error.no_pokaz', []);
+    }
 }
