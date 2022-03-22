@@ -182,10 +182,6 @@ class PokazController extends Controller
     //формирование квитанции пользователем по своей квартире
     public function calc()
     {
-        echo 'Раздел будет доступен с 25.02.2022г.!';
-        exit();
-
-
         $user = auth()->user();
         if (in_array($user->flat,['admin','admin1'])){
             return redirect(route('error.info_m_kvit'));
